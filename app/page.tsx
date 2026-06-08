@@ -5,6 +5,7 @@ import InputZone from '@/components/InputZone'
 import InterpretationPreview from '@/components/InterpretationPreview'
 import BookletViewer from '@/components/BookletViewer'
 import type { InterpretationData, BookletData } from '@/lib/types'
+import { USC_BOOKLET } from '@/lib/demo'
 
 type Stage = 'input' | 'preview' | 'booklet'
 
@@ -59,6 +60,9 @@ export default function Home() {
                 Upload a photo or describe what you want to build.
                 We&apos;ll generate a real step-by-step booklet — just like the one in the box.
               </p>
+              <button className="demo-btn" onClick={() => handleBooklet(USC_BOOKLET)}>
+                👀 See a sample — USC Village Clock Tower
+              </button>
             </div>
             <InputZone onInterpretation={handleInterpretation} />
           </div>
@@ -158,7 +162,24 @@ export default function Home() {
           font-size: clamp(15px, 2vw, 17px);
           color: var(--color-text-secondary);
           line-height: 1.6;
-          margin: 0;
+          margin: 0 0 12px;
+        }
+        .demo-btn {
+          background: none;
+          border: 1.5px dashed var(--color-border-primary);
+          border-radius: var(--radius-full);
+          padding: 10px 20px;
+          font-family: var(--font-display);
+          font-size: 14px;
+          font-weight: 700;
+          color: var(--color-text-secondary);
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .demo-btn:hover {
+          border-color: var(--lego-red);
+          color: var(--lego-red);
+          background: #fff5f5;
         }
         @media (max-width: 600px) {
           .header { padding: 16px 20px; }
