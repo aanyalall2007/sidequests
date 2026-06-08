@@ -1,8 +1,5 @@
 @import "tailwindcss";
 
-/* ─── Google Fonts ─────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&family=Nunito+Sans:wght@400;600;700&display=swap');
-
 /* ─── Design Tokens: Lego Instruction Generator ─────────────────────
    Philosophy: Faithful replica — clean minimal app shell, authentic
    Lego booklet output. Tokens split into two zones:
@@ -58,8 +55,8 @@
   --color-surface-overlay:     rgba(26, 26, 26, 0.6);
 
   /* ── Typography ───────────────────────────────────────────────── */
-  --font-display:   'Nunito', sans-serif;
-  --font-body:      'Nunito Sans', sans-serif;
+  --font-display:   var(--font-nunito), 'Nunito', sans-serif;
+  --font-body:      var(--font-nunito-sans), 'Nunito Sans', sans-serif;
   --font-mono:      'Courier New', monospace;
 
   --font-size-xs:   0.75rem;
