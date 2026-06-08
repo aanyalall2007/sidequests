@@ -1,0 +1,241 @@
+@import "tailwindcss";
+
+/* ─── Google Fonts ─────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&family=Nunito+Sans:wght@400;600;700&display=swap');
+
+/* ─── Design Tokens: Lego Instruction Generator ─────────────────────
+   Philosophy: Faithful replica — clean minimal app shell, authentic
+   Lego booklet output. Tokens split into two zones:
+     1. App tokens  — the website UI wrapping the generator
+     2. Booklet tokens — the powder-blue instruction page output
+──────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Brand primitives ─────────────────────────────────────────── */
+  --lego-red:           #E3000B;
+  --lego-red-dark:      #B5000A;
+  --lego-yellow:        #F7D117;
+  --lego-yellow-dark:   #D4B000;
+  --lego-blue:          #006CB7;
+  --lego-blue-light:    #0090D4;
+  --lego-black:         #1A1A1A;
+  --lego-white:         #FFFFFF;
+
+  /* Booklet-specific */
+  --booklet-bg:         #C5DDEF;   /* powder blue — all instruction pages */
+  --booklet-bg-dark:    #A8C8E0;   /* slightly deeper for cards/wells */
+  --booklet-step-cream: #F5ECD0;   /* warm cream callout boxes */
+  --booklet-arrow:      #CC0000;   /* red placement arrows */
+  --booklet-progress:   #0057A8;   /* progress bar + dot */
+  --booklet-divider:    #9BBFD8;   /* vertical step divider line */
+
+  /* ── App shell colors (light mode) ────────────────────────────── */
+  --color-bg-primary:          #FFFFFF;
+  --color-bg-secondary:        #F5F7FA;
+  --color-bg-tertiary:         #EDF0F5;
+  --color-bg-inverse:          var(--lego-black);
+
+  --color-text-primary:        #1A1A1A;
+  --color-text-secondary:      #4A4A5A;
+  --color-text-tertiary:       #8A8A9A;
+  --color-text-inverse:        #FFFFFF;
+  --color-text-link:           var(--lego-blue);
+
+  --color-border-primary:      #D8DCE6;
+  --color-border-secondary:    #EAEDF2;
+  --color-border-focus:        var(--lego-blue);
+
+  --color-accent-primary:       var(--lego-red);
+  --color-accent-primary-hover: var(--lego-red-dark);
+  --color-accent-primary-active:#8A0007;
+  --color-accent-secondary:     var(--lego-yellow);
+
+  --color-status-success:      #2E8B57;
+  --color-status-warning:      #E8A000;
+  --color-status-error:        var(--lego-red);
+  --color-status-info:         var(--lego-blue);
+
+  --color-surface-overlay:     rgba(26, 26, 26, 0.6);
+
+  /* ── Typography ───────────────────────────────────────────────── */
+  --font-display:   'Nunito', sans-serif;
+  --font-body:      'Nunito Sans', sans-serif;
+  --font-mono:      'Courier New', monospace;
+
+  --font-size-xs:   0.75rem;
+  --font-size-sm:   0.875rem;
+  --font-size-base: 1rem;
+  --font-size-md:   1.125rem;
+  --font-size-lg:   1.25rem;
+  --font-size-xl:   1.5rem;
+  --font-size-2xl:  2rem;
+  --font-size-3xl:  2.5rem;
+  --font-size-4xl:  3.5rem;    /* step numbers */
+  --font-size-5xl:  5rem;      /* cover display */
+
+  --font-weight-normal:   400;
+  --font-weight-medium:   600;
+  --font-weight-semibold: 700;
+  --font-weight-bold:     800;
+  --font-weight-black:    900;
+
+  --line-height-tight:    1.1;
+  --line-height-normal:   1.5;
+  --line-height-relaxed:  1.7;
+
+  --letter-spacing-tight:  -0.03em;
+  --letter-spacing-normal:  0;
+  --letter-spacing-wide:    0.08em;
+  --letter-spacing-wider:   0.14em;
+
+  /* ── Spacing (8px base) ───────────────────────────────────────── */
+  --space-0:   0;
+  --space-1:   2px;
+  --space-2:   4px;
+  --space-3:   8px;
+  --space-4:   12px;
+  --space-5:   16px;
+  --space-6:   24px;
+  --space-7:   32px;
+  --space-8:   48px;
+  --space-9:   64px;
+  --space-10:  80px;
+  --space-11:  96px;
+  --space-12:  128px;
+
+  /* ── Layout ───────────────────────────────────────────────────── */
+  --max-width-content:  680px;
+  --max-width-wide:     960px;
+  --max-width-page:     1280px;
+
+  --booklet-aspect:     4 / 3;
+  --booklet-max-width:  900px;
+
+  --radius-sm:    6px;
+  --radius-md:    12px;
+  --radius-lg:    20px;
+  --radius-xl:    28px;
+  --radius-full:  9999px;
+  --radius-brick-box: 10px;
+  --radius-callout:   14px;
+
+  /* ── Shadows ──────────────────────────────────────────────────── */
+  --shadow-sm:      0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md:      0 4px 12px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg:      0 8px 30px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08);
+  --shadow-booklet: 0 20px 60px rgba(0,0,0,0.18), 0 8px 20px rgba(0,0,0,0.10);
+  --shadow-focus:   0 0 0 3px rgba(0,108,183,0.35);
+
+  /* ── Motion ───────────────────────────────────────────────────── */
+  --duration-instant: 50ms;
+  --duration-fast:    150ms;
+  --duration-normal:  250ms;
+  --duration-slow:    400ms;
+  --duration-slower:  600ms;
+  --duration-page:    350ms;
+
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in:      cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:     cubic-bezier(0, 0, 0.2, 1);
+  --ease-bounce:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring:  cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* ── Dark mode ──────────────────────────────────────────────────────
+   App shell goes dark. Booklet output always stays powder blue —
+   it's a printed artifact, not a UI surface.
+─────────────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-bg-primary:     #111318;
+  --color-bg-secondary:   #1C2028;
+  --color-bg-tertiary:    #252B36;
+  --color-bg-inverse:     #F5F7FA;
+
+  --color-text-primary:   #F0F2F7;
+  --color-text-secondary: #9AA3B4;
+  --color-text-tertiary:  #606880;
+  --color-text-inverse:   #1A1A1A;
+  --color-text-link:      var(--lego-blue-light);
+
+  --color-border-primary:   #2E3444;
+  --color-border-secondary: #242A38;
+  --color-border-focus:     var(--lego-blue-light);
+
+  --color-accent-primary:       #FF1A22;
+  --color-accent-primary-hover: #E3000B;
+  --color-accent-secondary:     var(--lego-yellow);
+
+  --color-surface-overlay: rgba(0, 0, 0, 0.75);
+
+  --shadow-sm:      0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md:      0 4px 12px rgba(0,0,0,0.35);
+  --shadow-lg:      0 8px 30px rgba(0,0,0,0.4);
+  --shadow-booklet: 0 20px 60px rgba(0,0,0,0.5), 0 8px 20px rgba(0,0,0,0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-primary:     #111318;
+    --color-bg-secondary:   #1C2028;
+    --color-bg-tertiary:    #252B36;
+    --color-bg-inverse:     #F5F7FA;
+
+    --color-text-primary:   #F0F2F7;
+    --color-text-secondary: #9AA3B4;
+    --color-text-tertiary:  #606880;
+    --color-text-inverse:   #1A1A1A;
+    --color-text-link:      var(--lego-blue-light);
+
+    --color-border-primary:   #2E3444;
+    --color-border-secondary: #242A38;
+    --color-border-focus:     var(--lego-blue-light);
+
+    --color-accent-primary:       #FF1A22;
+    --color-accent-primary-hover: #E3000B;
+
+    --color-surface-overlay: rgba(0, 0, 0, 0.75);
+
+    --shadow-sm:      0 1px 3px rgba(0,0,0,0.3);
+    --shadow-md:      0 4px 12px rgba(0,0,0,0.35);
+    --shadow-lg:      0 8px 30px rgba(0,0,0,0.4);
+    --shadow-booklet: 0 20px 60px rgba(0,0,0,0.5), 0 8px 20px rgba(0,0,0,0.3);
+  }
+}
+
+/* ── Tailwind v4 theme extension ───────────────────────────────────── */
+@theme {
+  /* Colors */
+  --color-lego-red:          #E3000B;
+  --color-lego-red-dark:     #B5000A;
+  --color-lego-yellow:       #F7D117;
+  --color-lego-blue:         #006CB7;
+  --color-lego-blue-light:   #0090D4;
+  --color-booklet-bg:        #C5DDEF;
+  --color-booklet-cream:     #F5ECD0;
+  --color-booklet-progress:  #0057A8;
+  --color-booklet-arrow:     #CC0000;
+
+  /* Fonts */
+  --font-display: 'Nunito', sans-serif;
+  --font-body:    'Nunito Sans', sans-serif;
+
+  /* Border radius */
+  --radius-brick-box: 10px;
+  --radius-callout:   14px;
+
+  /* Shadows */
+  --shadow-booklet: 0 20px 60px rgba(0,0,0,0.18), 0 8px 20px rgba(0,0,0,0.10);
+}
+
+/* ── Base reset ────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
