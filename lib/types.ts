@@ -23,6 +23,8 @@ export interface InstructionStep {
   instruction: string
   subSteps?: SubStep[]
   notes?: string
+  grid?: string[][]          // top-down color grid, '' = empty
+  newCells?: [number, number][] // [row, col] cells added this step (highlighted)
 }
 
 export interface BookletData {

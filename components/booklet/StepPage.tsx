@@ -15,16 +15,15 @@ export default function StepPage({ steps, pageNumber, totalPages }: StepPageProp
   return (
     <div className="booklet-page">
       <div className="steps-container">
-        <StepPanel step={left} side="left" />
+        <StepPanel step={left} />
         {right && (
           <>
             <div className="step-divider" />
-            <StepPanel step={right} side="right" />
+            <StepPanel step={right} />
           </>
         )}
       </div>
 
-      {/* Progress bar */}
       <div className="progress-wrap">
         <div className="progress-track">
           <div className="progress-fill" style={{ width: `${pct}%` }} />
@@ -96,12 +95,12 @@ export default function StepPage({ steps, pageNumber, totalPages }: StepPageProp
   )
 }
 
-function StepPanel({ step, side }: { step: InstructionStep; side: 'left' | 'right' }) {
+function StepPanel({ step }: { step: InstructionStep }) {
   return (
-    <div className={`step-panel ${side}`}>
-      {/* Brick inventory for this step */}
+    <div className="step-panel">
+      {/* Bricks needed this step */}
       <div className="step-bricks-box">
-        {step.bricks.slice(0, 6).map((brick) => (
+        {step.bricks.slice(0, 5).map((brick) => (
           <BrickCount key={brick.id} brick={brick} />
         ))}
       </div>
@@ -109,34 +108,26 @@ function StepPanel({ step, side }: { step: InstructionStep; side: 'left' | 'righ
       {/* Step number */}
       <div className="step-number">{step.stepNumber}</div>
 
-      {/* Main content area */}
-      <div className="step-content">
-        {step.subSteps && step.subSteps.length > 0 ? (
-          <div className="substep-callout">
-            {step.subSteps.map((sub) => (
-              <div key={sub.number} className="substep">
-                <span className="substep-num">{sub.number}</span>
-                <div className="substep-bricks">
-                  {sub.bricks.slice(0, 4).map((b) => (
-                    <BrickCount key={b.id} brick={b} mini />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <BrickAssembly step={step} />
-        )}
+      {/* Main diagram — grid if available, else fallback */}
+      <div className="step-diagram">
+        {step.grid
+          ? <GridDiagram grid={step.grid} newCells={step.newCells || []} />
+          : <FallbackDiagram step={step} />
+        }
       </div>
+
+      {/* Instruction text */}
+      <div className="step-instruction">{step.instruction}</div>
 
       <style jsx>{`
         .step-panel {
           flex: 1;
-          padding: 14px 16px 10px;
+          padding: 10px 12px 8px;
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
           min-width: 0;
+          overflow: hidden;
         }
         .step-bricks-box {
           display: flex;
@@ -145,191 +136,183 @@ function StepPanel({ step, side }: { step: InstructionStep; side: 'left' | 'righ
           background: rgba(255,255,255,0.45);
           border: 1.5px solid rgba(255,255,255,0.7);
           border-radius: var(--radius-brick-box);
-          padding: 6px 8px;
-          min-height: 44px;
+          padding: 5px 8px;
+          min-height: 40px;
           align-items: center;
         }
         .step-number {
-          font-size: clamp(32px, 5vw, 56px);
+          font-size: clamp(28px, 4vw, 48px);
           font-weight: 900;
           color: #1A1A1A;
           letter-spacing: -0.03em;
           line-height: 1;
         }
-        .step-content {
+        .step-diagram {
           flex: 1;
           display: flex;
           align-items: center;
           justify-content: center;
+          min-height: 0;
         }
-        .substep-callout {
-          background: var(--booklet-step-cream);
-          border-radius: var(--radius-callout);
-          padding: 10px 12px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          width: 100%;
-        }
-        .substep {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .substep-num {
-          font-size: clamp(14px, 2vw, 20px);
-          font-weight: 900;
-          color: #1A1A1A;
-          min-width: 18px;
-        }
-        .substep-bricks {
-          display: flex;
-          gap: 4px;
-          flex-wrap: wrap;
+        .step-instruction {
+          font-size: clamp(9px, 1.1vw, 12px);
+          color: #2A2A2A;
+          line-height: 1.4;
+          font-family: var(--font-body);
+          font-weight: 600;
+          background: rgba(255,255,255,0.5);
+          border-radius: 6px;
+          padding: 5px 7px;
         }
       `}</style>
     </div>
   )
 }
 
-function BrickCount({ brick, mini = false }: { brick: BrickItem; mini?: boolean }) {
-  const size = mini ? 24 : 36
-  return (
-    <div className="brick-count">
-      <div className="brick-viz" style={{ width: size, height: size * 0.65 }}>
-        <svg viewBox="0 0 40 26" width={size} height={size * 0.65}>
-          <BrickSVG color={brick.colorHex} width={brick.width} type={brick.type} />
-        </svg>
-      </div>
-      <span className="qty" style={{ fontSize: mini ? 9 : 11 }}>{brick.quantity}x</span>
-      <style jsx>{`
-        .brick-count {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 2px;
-        }
-        .brick-viz {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .qty {
-          font-weight: 800;
-          color: #1A1A1A;
-          line-height: 1;
-        }
-      `}</style>
-    </div>
-  )
-}
+function GridDiagram({ grid, newCells }: { grid: string[][]; newCells: [number, number][] }) {
+  const rows = grid.length
+  const cols = grid[0]?.length || 0
+  if (!rows || !cols) return null
 
-function BrickAssembly({ step }: { step: InstructionStep }) {
-  // Render a simple growing stack diagram showing bricks being added
-  const colors = step.bricks.map(b => b.colorHex)
+  const newSet = new Set(newCells.map(([r, c]) => `${r},${c}`))
+
+  // Find bounding box of non-empty cells to crop view
+  let minR = rows, maxR = 0, minC = cols, maxC = 0
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (grid[r][c]) {
+        minR = Math.min(minR, r)
+        maxR = Math.max(maxR, r)
+        minC = Math.min(minC, c)
+        maxC = Math.max(maxC, c)
+      }
+    }
+  }
+
+  const visRows = maxR - minR + 1
+  const visCols = maxC - minC + 1
+  const cellSize = Math.min(200 / visRows, 200 / visCols, 14)
+  const w = visCols * cellSize
+  const h = visRows * cellSize
+
   return (
-    <div className="assembly">
-      <svg viewBox="0 0 120 100" width="100%" height="100%" style={{ maxWidth: 160, maxHeight: 120 }}>
-        {/* Base platform */}
-        <BaseStack colors={colors} stepNum={step.stepNumber} />
-        {/* Red placement arrows */}
-        <Arrow x1={60} y1={20} x2={60} y2={42} />
-        {/* New brick being added */}
-        <g transform="translate(32, 10)">
-          <BrickSVG color={colors[0] || '#CC0000'} width={2} type="brick" />
-        </g>
+    <div style={{ position: 'relative' }}>
+      {/* "TOP VIEW" label */}
+      <div style={{
+        position: 'absolute', top: -14, left: 0, right: 0,
+        textAlign: 'center', fontSize: 8, fontWeight: 700,
+        letterSpacing: '0.1em', color: 'rgba(0,0,0,0.4)',
+        textTransform: 'uppercase',
+      }}>Top View</div>
+
+      <svg width={w + 2} height={h + 2} style={{ display: 'block' }}>
+        {/* Grid background */}
+        <rect x={0} y={0} width={w + 2} height={h + 2} fill="rgba(255,255,255,0.15)" rx={4} />
+
+        {Array.from({ length: visRows }, (_, ri) =>
+          Array.from({ length: visCols }, (_, ci) => {
+            const r = ri + minR
+            const c = ci + minC
+            const color = grid[r]?.[c]
+            const isNew = newSet.has(`${r},${c}`)
+            const x = ci * cellSize + 1
+            const y = ri * cellSize + 1
+
+            if (!color) {
+              return (
+                <rect
+                  key={`${r},${c}`}
+                  x={x} y={y}
+                  width={cellSize - 0.5}
+                  height={cellSize - 0.5}
+                  fill="rgba(255,255,255,0.08)"
+                  stroke="rgba(0,0,0,0.06)"
+                  strokeWidth={0.3}
+                />
+              )
+            }
+
+            return (
+              <g key={`${r},${c}`}>
+                <rect
+                  x={x} y={y}
+                  width={cellSize - 0.5}
+                  height={cellSize - 0.5}
+                  fill={color}
+                  stroke={isNew ? '#000' : 'rgba(0,0,0,0.2)'}
+                  strokeWidth={isNew ? 1.2 : 0.4}
+                  opacity={isNew ? 1 : 0.4}
+                  rx={1}
+                />
+                {/* Stud dot */}
+                {cellSize >= 8 && (
+                  <circle
+                    cx={x + cellSize / 2 - 0.25}
+                    cy={y + cellSize / 2 - 0.25}
+                    r={cellSize * 0.2}
+                    fill={isNew ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.15)'}
+                  />
+                )}
+              </g>
+            )
+          })
+        )}
+
+        {/* Arrow pointing to new cells */}
+        {newCells.length > 0 && (() => {
+          const [nr, nc] = newCells[0]
+          const ri = nr - minR
+          const ci = nc - minC
+          if (ri < 0 || ci < 0) return null
+          const cx = ci * cellSize + cellSize / 2 + 1
+          const cy = ri * cellSize + 1
+          if (cy < 14) return null
+          return (
+            <g>
+              <line x1={cx} y1={cy - 10} x2={cx} y2={cy - 2}
+                stroke="#CC0000" strokeWidth={1.5} strokeLinecap="round" />
+              <polygon
+                points={`${cx},${cy - 1} ${cx - 3},${cy - 6} ${cx + 3},${cy - 6}`}
+                fill="#CC0000"
+              />
+            </g>
+          )
+        })()}
       </svg>
-      <style jsx>{`
-        .assembly {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-      `}</style>
     </div>
   )
 }
 
-function BaseStack({ colors, stepNum }: { colors: string[]; stepNum: number }) {
-  const layers = Math.min(stepNum, 5)
+function FallbackDiagram({ step }: { step: InstructionStep }) {
   return (
-    <>
-      {Array.from({ length: layers }).map((_, i) => {
-        const color = colors[i % colors.length] || '#CC0000'
-        const y = 90 - i * 12
-        return (
-          <g key={i} transform={`translate(20, ${y})`}>
-            <BrickSVG color={color} width={4} type={i === layers - 1 ? 'plate' : 'brick'} dim={i < layers - 1} />
-          </g>
-        )
-      })}
-    </>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+      {step.bricks.map((b) => (
+        <div key={b.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <div style={{
+            width: Math.min(b.width * 16, 64),
+            height: b.type === 'plate' ? 10 : 18,
+            background: b.colorHex,
+            borderRadius: 3,
+            border: '1px solid rgba(0,0,0,0.2)',
+          }} />
+          <span style={{ fontSize: 10, fontWeight: 800 }}>{b.quantity}×</span>
+        </div>
+      ))}
+    </div>
   )
 }
 
-function Arrow({ x1, y1, x2, y2 }: { x1: number; y1: number; x2: number; y2: number }) {
+function BrickCount({ brick }: { brick: BrickItem }) {
   return (
-    <g>
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#CC0000" strokeWidth="2.5" strokeLinecap="round" />
-      <polygon
-        points={`${x2},${y2} ${x2 - 5},${y2 - 8} ${x2 + 5},${y2 - 8}`}
-        fill="#CC0000"
-      />
-    </g>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+      <div style={{
+        width: Math.min(brick.width * 12, 48),
+        height: brick.type === 'plate' ? 8 : 14,
+        background: brick.colorHex,
+        borderRadius: 2,
+        border: '1px solid rgba(0,0,0,0.15)',
+      }} />
+      <span style={{ fontSize: 10, fontWeight: 800, color: '#1A1A1A' }}>{brick.quantity}×</span>
+    </div>
   )
-}
-
-function BrickSVG({ color, width, type, dim = false }: {
-  color: string; width: number; type: string; dim?: boolean
-}) {
-  const shade = shadeColor(color, -40)
-  const mid = shadeColor(color, -20)
-  const opacity = dim ? 0.45 : 1
-  const w = Math.min(width * 10, 80)
-  const d = type === 'plate' ? 3 : type === 'tile' ? 1 : 6
-
-  return (
-    <g opacity={opacity}>
-      {/* Top */}
-      <polygon
-        points={`${w/2},2 ${w},2+${w*0.3} ${w/2},2+${w*0.6} 0,2+${w*0.3}`}
-        fill={color}
-        stroke="rgba(0,0,0,0.1)"
-        strokeWidth="0.5"
-      />
-      {/* Right */}
-      <polygon
-        points={`${w},${2+w*0.3} ${w},${2+w*0.3+d} ${w/2},${2+w*0.6+d} ${w/2},${2+w*0.6}`}
-        fill={mid}
-      />
-      {/* Left */}
-      <polygon
-        points={`0,${2+w*0.3} ${w/2},${2+w*0.6} ${w/2},${2+w*0.6+d} 0,${2+w*0.3+d}`}
-        fill={shade}
-      />
-      {type !== 'tile' && width > 1 && (
-        <>
-          <ellipse cx={w * 0.3} cy={2 + w * 0.3 - 1} rx={3} ry={1.5} fill={shadeColor(color, -10)} />
-          <ellipse cx={w * 0.7} cy={2 + w * 0.3 - 1} rx={3} ry={1.5} fill={shadeColor(color, -10)} />
-        </>
-      )}
-      {type !== 'tile' && width === 1 && (
-        <ellipse cx={w / 2} cy={2 + w * 0.3 - 1} rx={3} ry={1.5} fill={shadeColor(color, -10)} />
-      )}
-    </g>
-  )
-}
-
-function shadeColor(hex: string, amount: number): string {
-  const cleaned = hex.replace('#', '')
-  const full = cleaned.length === 3
-    ? cleaned.split('').map(c => c + c).join('')
-    : cleaned
-  const n = parseInt(full, 16)
-  const r = Math.min(255, Math.max(0, (n >> 16) + amount))
-  const g = Math.min(255, Math.max(0, ((n >> 8) & 0xff) + amount))
-  const b = Math.min(255, Math.max(0, (n & 0xff) + amount))
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
 }
