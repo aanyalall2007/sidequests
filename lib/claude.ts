@@ -1,7 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk'
-import type { ComplexityTier, BookletData, InterpretationData, BrickItem, InstructionStep } from './types'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import type { ComplexityTier, BookletData, InterpretationData } from './types'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
 const BRICK_COUNT: Record<ComplexityTier, number> = {
   simple: 50,
@@ -15,17 +16,13 @@ export async function interpretInput(
   mimeType?: string,
   complexity: ComplexityTier = 'standard'
 ): Promise<InterpretationData> {
-  const content: Anthropic.MessageParam['content'] = []
+  const parts: Parameters<typeof model.generateContent>[0] extends { contents: infer C } ? never : any[] = []
 
   if (imageBase64 && mimeType) {
-    content.push({
-      type: 'image',
-      source: { type: 'base64', media_type: mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: imageBase64 },
-    })
+    parts.push({ inlineData: { data: imageBase64, mimeType } })
   }
 
-  content.push({
-    type: 'text',
+  parts.push({
     text: `You are a Lego set designer. Analyse this ${imageBase64 ? 'photo' : 'description'} and describe how you would simplify it into a Lego model.
 
 ${!imageBase64 ? `Description: "${description}"` : description ? `Additional context: "${description}"` : ''}
@@ -41,16 +38,11 @@ Respond with ONLY valid JSON matching this exact shape:
   "dominantShape": "one word describing main shape (e.g. rectangular, curved, cylindrical)",
   "complexity": "${complexity}",
   "suggestedApproach": "one sentence on how you'll build it layer by layer"
-}`,
+}`
   })
 
-  const msg = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 512,
-    messages: [{ role: 'user', content }],
-  })
-
-  const text = (msg.content[0] as Anthropic.TextBlock).text
+  const result = await model.generateContent(parts)
+  const text = result.response.text()
   return JSON.parse(text.replace(/```json\n?|\n?```/g, '').trim())
 }
 
@@ -62,17 +54,13 @@ export async function generateBooklet(
   id?: string
 ): Promise<BookletData> {
   const brickCount = BRICK_COUNT[interpretation.complexity]
-  const content: Anthropic.MessageParam['content'] = []
+  const parts: any[] = []
 
   if (imageBase64 && mimeType) {
-    content.push({
-      type: 'image',
-      source: { type: 'base64', media_type: mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: imageBase64 },
-    })
+    parts.push({ inlineData: { data: imageBase64, mimeType } })
   }
 
-  content.push({
-    type: 'text',
+  parts.push({
     text: `You are a Lego set designer creating official building instructions.
 
 Model to build: "${interpretation.title}"
@@ -105,8 +93,8 @@ Generate complete Lego building instructions as ONLY valid JSON:
       "stepNumber": 1,
       "bricks": [{ "id": "matches inventory id", "name": "...", "color": "...", "colorHex": "#...", "quantity": 1, "width": 2, "height": 4, "type": "brick" }],
       "instruction": "clear one-sentence instruction for this step",
-      "subSteps": null or [{ "number": 1, "description": "...", "bricks": [...] }],
-      "notes": null or "helpful tip"
+      "subSteps": null,
+      "notes": null
     }
   ]
 }
@@ -116,17 +104,11 @@ Rules:
 - Inventory lists every unique brick type with total quantity.
 - ColorHex must be realistic Lego colors: red #CC0000, yellow #F7D117, blue #006CB7, green #237841, black #1B2A34, white #F4F4F4, grey #9BA19D, tan #E4CD9E, orange #FE8A18, light-blue #9FC3E9, dark-grey #595D60, brown #7B3F00.
 - Build from bottom up (base → walls → details → finishing).
-- Use subSteps only for complex steps with multiple distinct actions.
-- Keep instructions child-friendly and clear.`,
+- Keep instructions child-friendly and clear.`
   })
 
-  const msg = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
-    messages: [{ role: 'user', content }],
-  })
-
-  const text = (msg.content[0] as Anthropic.TextBlock).text
+  const result = await model.generateContent(parts)
+  const text = result.response.text()
   const data = JSON.parse(text.replace(/```json\n?|\n?```/g, '').trim())
 
   return {
