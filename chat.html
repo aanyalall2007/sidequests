@@ -7,8 +7,10 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+<div id="cursor"></div>
+
 <nav class="cc-nav">
-  <div class="cc-logo">aanu&apos;s <span class="wiggle">closet</span> 🧦</div>
+  <div class="cc-logo">aanu&apos;s <span class="wiggle">closet</span></div>
   <div class="cc-nav-links">
     <a href="index.html">closet</a>
     <a href="wishlist.html">wishlist</a>
@@ -16,9 +18,15 @@
   </div>
 </nav>
 
+<header class="cc-hero" style="padding-bottom: 1rem;">
+  <div class="cc-glyph">⁂</div>
+  <h1>what's the <em>vibe</em>?</h1>
+  <p>tell me the mood + what you're doing, i'll pin a fit from your actual closet.</p>
+</header>
+
 <div class="cc-note-banner">
-  prototype mode: replies are simulated locally. wire this up to the Claude API via a
-  server route once you bring this into Claude Code — see script.js / README for the drop-in fetch call.
+  prototype mode: replies are simulated locally from your tagged pieces. see README for wiring
+  this up to a real model via a server route.
 </div>
 
 <div class="cc-chat-wrap">
@@ -29,8 +37,13 @@
   </form>
 </div>
 
+<div class="cc-board-wrap">
+  <div class="cc-board-label">⁂ today's board</div>
+  <div class="cc-board" id="board"></div>
+</div>
+
 <script src="data.js"></script>
 <script src="script.js"></script>
-<script>initChat();</script>
+<script>initCursor(); initChat();</script>
 </body>
 </html>

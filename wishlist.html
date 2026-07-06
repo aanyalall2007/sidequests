@@ -7,8 +7,10 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+<div id="cursor"></div>
+
 <nav class="cc-nav">
-  <div class="cc-logo">aanu&apos;s <span class="wiggle">closet</span> 🧦</div>
+  <div class="cc-logo">aanu&apos;s <span class="wiggle">closet</span></div>
   <div class="cc-nav-links">
     <a href="index.html">closet</a>
     <a href="wishlist.html" class="active">wishlist</a>
@@ -17,14 +19,15 @@
 </nav>
 
 <header class="cc-hero">
-  <h1>things i want.</h1>
-  <p>pulled from the pinterest board, priced for delhi, refreshed every couple weeks.</p>
+  <div class="cc-glyph">⁂</div>
+  <h1>things i <em>want</em>.</h1>
+  <p>pulled off the pinterest board, priced for delhi, refreshed every couple weeks.</p>
 </header>
 
 <div id="wishGrid" class="cc-wish-grid"></div>
 
 <script src="data.js"></script>
 <script src="script.js"></script>
-<script>renderWishlist();</script>
+<script>initCursor(); renderWishlist();</script>
 </body>
 </html>

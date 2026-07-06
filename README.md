@@ -1,8 +1,12 @@
 # aanu's closet — prototype
 
-A quick static HTML/CSS/JS prototype for a personal styling app. Style is
-lifted from `222.place` (Crimson Pro serif, dark forest green + cream,
-lowercase copy, pill buttons, playful tilt on hover).
+A quick static HTML/CSS/JS prototype for a personal styling app. Style matches
+aanya.dev's own design system (handmade-editorial): EB Garamond + Space Mono,
+cream `#f4efe4` / ink `#0d0d0d` / gold `#8a7355`, lowercase copy with italic
+used on exactly one word per line, tags rendered as `(parentheticals)` instead
+of pill badges, taped-polaroid cutout cards, a custom cursor, and a signature
+interaction — the stylist "pins" your fit to a little corkboard (`⁂ today's
+board`) on the chat page.
 
 ## Run it
 Just open `index.html` in a browser — no build step, no dependencies.
