@@ -1,7 +1,69 @@
 // aanu's closet — data
-// closetItems starts empty. When you photograph a piece, cut out the
-// background and push a new object here: { id, name, image, tags: [] }.
-const closetItems = [];
+// closetItems seeded from the "twenny six / looks" pinterest board.
+// When you photograph a real piece, cut out the background and push a
+// new object here: { id, name, image, tags: [] }.
+const closetItems = [
+  {
+    id: 'gold-gemstone-sandals',
+    name: 'gold gemstone beaded sandals',
+    image: 'https://i.pinimg.com/736x/7f/a7/47/7fa74734eb7d1ed9e7b63a7b3b2d661c.jpg',
+    tags: ['heels', 'going out', 'shoes'],
+  },
+  {
+    id: 'olive-cutout-halter-flare-jeans',
+    name: 'olive cutout halter top + dark flare jeans',
+    image: 'https://i.pinimg.com/736x/3c/c3/c2/3cc3c2025e4c4499c12d50c78a90e0ad.jpg',
+    tags: ['going out', 'denim'],
+  },
+  {
+    id: 'white-eyelet-set',
+    name: 'white eyelet corset top + tiered skirt set',
+    image: 'https://i.pinimg.com/736x/91/f3/f6/91f3f6b7b21114a46046779f712084b1.jpg',
+    tags: ['going out', 'skirts'],
+  },
+  {
+    id: 'black-backless-slip-dress',
+    name: 'black backless slip dress',
+    image: 'https://i.pinimg.com/736x/a4/3f/34/a43f34df9307dbe7ff7e36bed72d0549.jpg',
+    tags: ['going out', 'dresses'],
+  },
+  {
+    id: 'red-tiered-maxi-crochet-top',
+    name: 'red tiered lace maxi skirt + cream crochet top',
+    image: 'https://i.pinimg.com/736x/8d/ac/a4/8daca4cb35368ec3dcacc6cd06188876.jpg',
+    tags: ['skirts', 'going out'],
+  },
+  {
+    id: 'graphic-tee-sweatpants',
+    name: 'off-shoulder graphic tee + grey sweatpants',
+    image: 'https://i.pinimg.com/736x/70/02/72/7002727781e66d58f4f04ec4dd156f28.jpg',
+    tags: ['casual', 'cat eye sunglasses'],
+  },
+  {
+    id: 'brown-zip-top-yellow-flares',
+    name: 'brown zip-up top + pale yellow flare trousers',
+    image: 'https://i.pinimg.com/736x/1e/d2/f4/1ed2f40179cfc25d97b5996197993f45.jpg',
+    tags: ['casual'],
+  },
+  {
+    id: 'cream-tank-track-pants',
+    name: 'cream tank top + navy track pants, gold side stripe',
+    image: 'https://i.pinimg.com/736x/e2/10/23/e21023b39d8f5db649085af9ba4035d5.jpg',
+    tags: ['casual', 'loungewear'],
+  },
+  {
+    id: 'black-tank-flare-jeans',
+    name: 'black v-neck tank + dark flare jeans',
+    image: 'https://i.pinimg.com/736x/23/1e/85/231e853e0c11c5e086e8166a5c98d687.jpg',
+    tags: ['going out', 'denim'],
+  },
+  {
+    id: 'navy-athleisure-set',
+    name: 'navy tank + bike shorts athleisure set',
+    image: 'https://i.pinimg.com/736x/0a/32/6f/0a326f9b9e4f836762642ab4e5c01c20.jpg',
+    tags: ['athleisure', 'casual', 'cat eye sunglasses'],
+  },
+];
 
 // wishlist — pulled from the "twenny six / looks" pinterest board,
 // matched to niche + mainstream India shops, budget ₹1,000–3,000/item.
