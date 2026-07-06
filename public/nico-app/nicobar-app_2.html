@@ -1,0 +1,1603 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nicobar Home — App Prototype</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/plain" id="app-source">
+const { useState } = React;
+
+// ─── DESIGN TOKENS (from nicobar.com inspection) ───────────────────────────
+// Font: Futura PT (sans), Cormorant Garamond (serif) — via Google Fonts proxy
+// Colors: white background, near-black text #1a1a1a, accent none (pure editorial)
+// Logo font: custom — replicated via letter-spacing + Cormorant Garamond
+// Nav: uppercase, 11px, letter-spacing 0.14em, font-weight 500
+// Buttons: all-caps, no border-radius, solid black fill or outlined
+// Product names: 13px, weight 400
+// Prices: 13px, weight 400
+// Section headings: uppercase, 10px, letter-spacing 0.2em
+
+const FONT_URL =
+  "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap";
+
+// Nicobar exact palette from site inspection
+const N = {
+  white: "#FFFFFF",
+  bg: "#FFFFFF",
+  black: "#1a1a1a",
+  grey1: "#4a4a4a",   // body text secondary
+  grey2: "#888888",   // captions, labels
+  grey3: "#bbbbbb",   // borders, dividers
+  grey4: "#e8e8e8",   // light borders
+  grey5: "#f5f5f5",   // very light bg / chips
+  grey6: "#f0f0f0",   // placeholder image bg
+  cream: "#faf7f2",   // their off-white background
+  creamDark: "#f0ebe1", // slightly darker cream
+  accent: "#1a1a1a",  // no brand accent color — pure B&W
+};
+
+const globalStyle = `
+@import url('${FONT_URL}');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Jost', sans-serif; background: #e8e4de; }
+input, button, select, textarea { font-family: 'Jost', sans-serif; }
+button { cursor: pointer; }
+::-webkit-scrollbar { display: none; }
+`;
+
+// ─── PLACEHOLDER IMAGE COMPONENT ────────────────────────────────────────────
+const Placeholder = ({ w, h, label = "", style = {}, aspect }) => (
+  <div
+    style={{
+      width: w || "100%",
+      height: h,
+      aspectRatio: aspect,
+      background: N.grey6,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      ...style,
+    }}
+  >
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={N.grey3} strokeWidth="1.2">
+      <rect x="3" y="3" width="18" height="18" rx="1"/>
+      <circle cx="8.5" cy="8.5" r="1.5"/>
+      <polyline points="21 15 16 10 5 21"/>
+    </svg>
+    {label && (
+      <span style={{ fontSize: 9, color: N.grey3, marginTop: 5, letterSpacing: "0.08em", textTransform: "uppercase", textAlign: "center", padding: "0 8px" }}>
+        {label}
+      </span>
+    )}
+  </div>
+);
+
+// ─── NICOBAR LOGO ────────────────────────────────────────────────────────────
+const NicobarLogo = ({ size = 18, color = N.black }) => (
+  <span
+    style={{
+      fontFamily: "'Cormorant Garamond', serif",
+      fontSize: size,
+      fontWeight: 400,
+      letterSpacing: "0.22em",
+      color,
+      textTransform: "uppercase",
+      userSelect: "none",
+    }}
+  >
+    Nicobar
+  </span>
+);
+
+// ─── PHONE SHELL ─────────────────────────────────────────────────────────────
+const Phone = ({ children }) => (
+  <div
+    style={{
+      width: 375,
+      height: 812,
+      background: N.white,
+      borderRadius: 44,
+      border: "10px solid #111",
+      boxShadow: "0 0 0 1.5px #2a2a2a, 0 32px 80px rgba(0,0,0,0.45), inset 0 0 0 1px #333",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      position: "relative",
+    }}
+  >
+    {/* Dynamic Island */}
+    <div style={{ height: 48, background: N.white, display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 6, flexShrink: 0 }}>
+      <div style={{ width: 120, height: 34, background: "#111", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+        <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#1a1a1a", border: "1.5px solid #2a2a2a" }} />
+        <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#1c1c1c" }} />
+      </div>
+    </div>
+    {children}
+  </div>
+);
+
+// ─── STATUS BAR ──────────────────────────────────────────────────────────────
+const StatusBar = () => (
+  <div style={{ height: 0 }} />
+);
+
+// ─── TOP NAV ─────────────────────────────────────────────────────────────────
+const TopNav = ({ left, center, right }) => (
+  <div
+    style={{
+      height: 52,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "0 16px",
+      borderBottom: `0.5px solid ${N.grey4}`,
+      background: N.white,
+      flexShrink: 0,
+      zIndex: 10,
+    }}
+  >
+    <div style={{ width: 48, display: "flex", alignItems: "center" }}>{left}</div>
+    <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>{center}</div>
+    <div style={{ width: 48, display: "flex", alignItems: "center", justifyContent: "flex-end" }}>{right}</div>
+  </div>
+);
+
+// ─── ICON ────────────────────────────────────────────────────────────────────
+const Icon = ({ name, size = 20, color = N.black, onClick, style = {} }) => {
+  const paths = {
+    "arrow-left": <polyline points="15 18 9 12 15 6"/>,
+    "menu": <><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>,
+    "bag": <><path d="M6 2 L3 6 v14 a2 2 0 0 0 2 2 h14 a2 2 0 0 0 2-2 V6 l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></>,
+    "heart": <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>,
+    "search": <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
+    "share": <><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></>,
+    "camera": <><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>,
+    "map-pin": <><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></>,
+    "check": <polyline points="20 6 9 17 4 12"/>,
+    "star": <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>,
+    "trash": <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></>,
+    "gift": <><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></>,
+    "sparkle": <><path d="M12 3 L13.5 9 L20 9 L14.5 13 L16.5 20 L12 16 L7.5 20 L9.5 13 L4 9 L10.5 9 Z"/></>,
+    "home": <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
+    "user": <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+    "minus": <line x1="5" y1="12" x2="19" y2="12"/>,
+    "plus": <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
+    "chevron-right": <polyline points="9 18 15 12 9 6"/>,
+    "chevron-down": <polyline points="6 9 12 15 18 9"/>,
+    "upload": <><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></>,
+    "google": <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>,
+  };
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+      onClick={onClick} style={{ cursor: onClick ? "pointer" : "default", flexShrink: 0, ...style }}
+    >
+      {paths[name]}
+    </svg>
+  );
+};
+
+// ─── BOTTOM TAB BAR ──────────────────────────────────────────────────────────
+const BottomBar = ({ active, go }) => {
+  const tabs = [
+    { id: "discover", label: "Discover", icon: "sparkle" },
+    { id: "room", label: "My Room", icon: "home" },
+    { id: "wishlist", label: "Wishlist", icon: "heart" },
+    { id: "profile", label: "Profile", icon: "user" },
+  ];
+  return (
+    <div style={{ height: 64, display: "flex", borderTop: `0.5px solid ${N.grey4}`, background: N.white, flexShrink: 0 }}>
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => go(t.id)}
+          style={{
+            flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", gap: 4, background: "transparent", border: "none",
+            color: active === t.id ? N.black : N.grey3,
+          }}
+        >
+          <Icon name={t.icon} size={20} color={active === t.id ? N.black : N.grey3} />
+          <span style={{ fontSize: 8, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: active === t.id ? 500 : 400 }}>{t.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// ─── SCROLLABLE CONTENT WRAPPER ───────────────────────────────────────────────
+const Scroll = ({ children, style = {} }) => (
+  <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", ...style }}>{children}</div>
+);
+
+// ─── ANNOUNCEMENT BANNER ──────────────────────────────────────────────────────
+const Banner = ({ text }) => (
+  <div style={{ background: N.black, color: N.white, textAlign: "center", padding: "8px 16px", fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", flexShrink: 0 }}>
+    {text}
+  </div>
+);
+
+// ─── BUTTON COMPONENTS ────────────────────────────────────────────────────────
+const BtnPrimary = ({ children, onClick, style = {} }) => (
+  <button
+    onClick={onClick}
+    style={{
+      width: "100%", padding: "14px 16px", background: N.black, color: N.white,
+      border: "none", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase",
+      fontWeight: 500, fontFamily: "'Jost', sans-serif", ...style,
+    }}
+  >
+    {children}
+  </button>
+);
+
+const BtnOutline = ({ children, onClick, style = {} }) => (
+  <button
+    onClick={onClick}
+    style={{
+      width: "100%", padding: "13px 16px", background: N.white, color: N.black,
+      border: `1px solid ${N.black}`, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase",
+      fontWeight: 500, fontFamily: "'Jost', sans-serif", ...style,
+    }}
+  >
+    {children}
+  </button>
+);
+
+// ─── INPUT ────────────────────────────────────────────────────────────────────
+const Input = ({ label, ...props }) => (
+  <div style={{ marginBottom: 14 }}>
+    {label && <div style={{ fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: N.grey2, marginBottom: 6 }}>{label}</div>}
+    <input
+      {...props}
+      style={{
+        width: "100%", padding: "13px 14px", border: `1px solid ${N.grey4}`,
+        fontSize: 13, color: N.black, outline: "none", background: N.white,
+        fontFamily: "'Jost', sans-serif", letterSpacing: "0.02em",
+      }}
+    />
+  </div>
+);
+
+// ─── SECTION LABEL ────────────────────────────────────────────────────────────
+const SectionLabel = ({ children, style = {} }) => (
+  <div style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: N.grey2, marginBottom: 12, ...style }}>
+    {children}
+  </div>
+);
+
+// ─── DIVIDER ─────────────────────────────────────────────────────────────────
+const Divider = ({ label }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "18px 0" }}>
+    <div style={{ flex: 1, height: 1, background: N.grey4 }} />
+    {label && <span style={{ fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: N.grey2 }}>{label}</span>}
+    <div style={{ flex: 1, height: 1, background: N.grey4 }} />
+  </div>
+);
+
+// ─── OTP BOXES ────────────────────────────────────────────────────────────────
+const OtpBoxes = ({ values = ["8", "4", "2", ""] }) => (
+  <div style={{ display: "flex", gap: 10, justifyContent: "center", margin: "24px 0" }}>
+    {values.map((v, i) => (
+      <div key={i} style={{
+        width: 60, height: 64, border: `1px solid ${v ? N.black : N.grey4}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: N.black,
+        background: v ? N.white : N.grey5,
+      }}>
+        {v}
+      </div>
+    ))}
+  </div>
+);
+
+// ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
+const ProductCard = ({ name, sub, price, onClick, aspect = "3/4" }) => (
+  <div onClick={onClick} style={{ cursor: "pointer" }}>
+    <Placeholder aspect={aspect} label={name} />
+    <div style={{ padding: "10px 0 14px" }}>
+      <div style={{ fontSize: 12, color: N.black, letterSpacing: "0.02em" }}>{name}</div>
+      {sub && <div style={{ fontSize: 11, color: N.grey2, marginTop: 2, letterSpacing: "0.02em" }}>{sub}</div>}
+      <div style={{ fontSize: 12, color: N.black, marginTop: 6, letterSpacing: "0.02em" }}>₹{price}</div>
+    </div>
+  </div>
+);
+
+// ─── CHIP FILTER ──────────────────────────────────────────────────────────────
+const ChipFilter = ({ options, active, onChange }) => (
+  <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2, marginBottom: 16 }}>
+    {options.map((o) => (
+      <button
+        key={o}
+        onClick={() => onChange(o)}
+        style={{
+          flexShrink: 0, padding: "7px 14px",
+          border: `1px solid ${active === o ? N.black : N.grey4}`,
+          background: active === o ? N.black : N.white,
+          color: active === o ? N.white : N.grey1,
+          fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
+          fontFamily: "'Jost', sans-serif",
+        }}
+      >
+        {o}
+      </button>
+    ))}
+  </div>
+);
+
+// ─── STEP PROGRESS ────────────────────────────────────────────────────────────
+const StepProgress = ({ current }) => (
+  <div style={{ display: "flex", alignItems: "center", margin: "0 0 20px" }}>
+    {["Cart", "Address & Payment", "Confirmed"].map((s, i) => (
+      <div key={i} style={{ display: "flex", alignItems: "center", flex: i < 2 ? 1 : 0 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <div style={{
+            width: 24, height: 24, borderRadius: "50%",
+            background: i < current ? N.black : i === current ? N.black : N.white,
+            border: i >= current ? `1px solid ${i === current ? N.black : N.grey4}` : "none",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: i <= current ? N.white : N.grey3, fontSize: 10, fontWeight: 500,
+          }}>
+            {i < current ? <Icon name="check" size={12} color={N.white} /> : <span>{i + 1}</span>}
+          </div>
+          <span style={{ fontSize: 8, letterSpacing: "0.08em", textTransform: "uppercase", color: i <= current ? N.black : N.grey3, whiteSpace: "nowrap" }}>{s}</span>
+        </div>
+        {i < 2 && <div style={{ flex: 1, height: 1, background: i < current ? N.black : N.grey4, margin: "0 8px", marginBottom: 18 }} />}
+      </div>
+    ))}
+  </div>
+);
+
+// ─── MAKER QUOTE CARD ─────────────────────────────────────────────────────────
+const MakerCard = ({ name, role, location, quote, go }) => (
+  <div
+    onClick={() => go("maker")}
+    style={{ border: `1px solid ${N.grey4}`, padding: 16, marginTop: 20, cursor: "pointer" }}
+  >
+    <SectionLabel>From the maker</SectionLabel>
+    <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+      <Placeholder w={44} h={44} style={{ borderRadius: "50%", flexShrink: 0 }} />
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 500, color: N.black, letterSpacing: "0.04em" }}>{name}</div>
+        <div style={{ fontSize: 10, color: N.grey2, marginTop: 2, letterSpacing: "0.03em" }}>{role}</div>
+        <div style={{ fontSize: 10, color: N.grey2, marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
+          <Icon name="map-pin" size={10} color={N.grey2} />
+          {location}
+        </div>
+      </div>
+      <span style={{ marginLeft: "auto", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: N.grey2, whiteSpace: "nowrap", alignSelf: "flex-start" }}>Read story</span>
+    </div>
+    <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontStyle: "italic", color: N.grey1, lineHeight: 1.75, paddingLeft: 12, borderLeft: `2px solid ${N.grey3}` }}>
+      "{quote}"
+    </p>
+  </div>
+);
+
+// ─── PRODUCT DATASET (shared by looks carousel + swipe deck) ─────────────────
+const PRODUCTS = [
+  { name: "Valley Vase", price: 4600, tags: ["Terracotta", "Dining", "Aluminium"] },
+  { name: "Indigo Dinner Plates", price: 3290, tags: ["Block print", "Dining"] },
+  { name: "Brass Taper Candles", price: 2190, tags: ["Brass", "Ambient"] },
+  { name: "Rattan Wall Mirror", price: 4490, tags: ["Rattan", "Living room"] },
+  { name: "Nadi Vase", price: 3190, tags: ["Terracotta", "Dining"] },
+  { name: "Palm Mug", price: 1890, tags: ["Hand-glazed", "Dining"] },
+  { name: "Diya Set", price: 1490, tags: ["Brass", "Ambient"] },
+  { name: "Clay Tea Pot", price: 2890, tags: ["Terracotta", "Dining"] },
+  { name: "Chai Cups ×4", price: 2290, tags: ["Terracotta", "Dining"] },
+  { name: "Spice Jar Set", price: 1490, tags: ["Rattan", "Living room"] },
+];
+
+const STYLED_LOOKS = [
+  { title: "The Monsoon Table", meta: "Monsoon 25 · Dining · 4 pieces", tags: ["Terracotta", "Hand-thrown", "Dining"], price: "₹8,490 for the set" },
+  { title: "Still Evening", meta: "Perennial · Living room · 3 pieces", tags: ["Brass", "Hand-glazed", "Ambient"], price: "₹6,290 for the set" },
+  { title: "Morning Ritual", meta: "Everyday · Dining · 5 pieces", tags: ["Clay", "Warm", "Breakfast"], price: "₹5,190 for the set" },
+];
+
+// ─── STYLED LOOKS CAROUSEL (editorial, full-bleed, before the plain grid) ────
+const StyledLooksCarousel = ({ go }) => (
+  <div style={{ padding: "4px 0 8px" }}>
+    <div style={{ padding: "0 16px", marginBottom: 12 }}>
+      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: N.black, marginBottom: 2 }}>Styled looks</div>
+      <div style={{ fontSize: 11, color: N.grey2, letterSpacing: "0.02em" }}>Full rooms, styled by us — shop the whole scene</div>
+    </div>
+    <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "0 16px 6px", scrollSnapType: "x mandatory" }}>
+      {STYLED_LOOKS.map((look) => (
+        <div
+          key={look.title}
+          onClick={() => go("product")}
+          style={{ position: "relative", flexShrink: 0, width: "82%", aspectRatio: "3/4", cursor: "pointer", scrollSnapAlign: "start", overflow: "hidden" }}
+        >
+          <Placeholder w="100%" h="100%" label={look.title + " — styled scene"} style={{ position: "absolute", inset: 0 }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)" }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 16 }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 4 }}>{look.meta}</div>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: N.white, marginBottom: 8 }}>{look.title}</div>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
+              {look.tags.map((t) => (
+                <span key={t} style={{ fontSize: 8, letterSpacing: "0.1em", textTransform: "uppercase", border: "0.5px solid rgba(255,255,255,0.5)", padding: "3px 8px", color: "rgba(255,255,255,0.9)" }}>{t}</span>
+              ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 11, color: N.white }}>{look.price}</span>
+              <span style={{ fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: N.black, background: N.white, padding: "8px 14px" }}>Shop the look</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// ─── SWIPE DECK (Tinder-style like / skip for taste-based recommendations) ──
+const SwipeDeck = ({ go, cardW = 300, cardH = 380 }) => {
+  const [index, setIndex] = useState(0);
+  const [drag, setDrag] = useState({ dragging: false, startX: 0, dx: 0 });
+  const [liked, setLiked] = useState([]);
+  const [passed, setPassed] = useState([]);
+
+  const deck = PRODUCTS;
+  const done = index >= deck.length;
+
+  const commit = (direction) => {
+    const item = deck[index];
+    if (direction === "like") setLiked((l) => [...l, item]);
+    else setPassed((p) => [...p, item]);
+    setDrag({ dragging: false, startX: 0, dx: 0 });
+    setIndex((i) => i + 1);
+  };
+
+  const onDown = (e) => {
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    setDrag({ dragging: true, startX: x, dx: 0 });
+  };
+  const onMove = (e) => {
+    if (!drag.dragging) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    setDrag((d) => ({ ...d, dx: x - d.startX }));
+  };
+  const onUp = () => {
+    if (!drag.dragging) return;
+    if (drag.dx > 90) commit("like");
+    else if (drag.dx < -90) commit("dislike");
+    else setDrag({ dragging: false, startX: 0, dx: 0 });
+  };
+
+  const recommendations = () => {
+    if (liked.length === 0) return deck.slice(0, 4);
+    const likedTags = new Set(liked.flatMap((p) => p.tags));
+    return deck
+      .filter((p) => !liked.includes(p) && p.tags.some((t) => likedTags.has(t)))
+      .slice(0, 4);
+  };
+
+  if (done) {
+    const recs = recommendations();
+    return (
+      <div style={{ padding: "8px 16px 24px", textAlign: "center" }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, marginBottom: 6 }}>You liked {liked.length} of {deck.length}</div>
+        <p style={{ fontSize: 11, color: N.grey1, lineHeight: 1.7, marginBottom: 18 }}>Here's what we'd recommend based on your taste</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, textAlign: "left" }}>
+          {recs.map((p) => (
+            <div key={p.name} onClick={() => go("product")} style={{ cursor: "pointer" }}>
+              <Placeholder aspect="1/1" label={p.name} />
+              <div style={{ fontSize: 11, color: N.black, marginTop: 6 }}>{p.name}</div>
+              <div style={{ fontSize: 10, color: N.grey2, marginTop: 2 }}>₹{p.price.toLocaleString("en-IN")}</div>
+            </div>
+          ))}
+        </div>
+        <BtnOutline style={{ marginTop: 18 }} onClick={() => { setIndex(0); setLiked([]); setPassed([]); }}>Swipe again</BtnOutline>
+      </div>
+    );
+  }
+
+  const rotate = drag.dx / 18;
+  const likeOpacity = Math.min(Math.max(drag.dx / 90, 0), 1);
+  const passOpacity = Math.min(Math.max(-drag.dx / 90, 0), 1);
+
+  return (
+    <div style={{ padding: "8px 16px 24px" }}>
+      <div style={{ textAlign: "center", marginBottom: 14 }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20 }}>Swipe for your style</div>
+        <div style={{ fontSize: 10, color: N.grey2, marginTop: 2 }}>{index + 1} of {deck.length} · Swipe right to like, left to skip</div>
+      </div>
+      <div style={{ position: "relative", width: cardW, height: cardH, margin: "0 auto" }}>
+        {deck.slice(index, index + 3).reverse().map((p, revI) => {
+          const stackI = deck.slice(index, index + 3).length - 1 - revI;
+          const isTop = stackI === 0;
+          return (
+            <div
+              key={p.name}
+              onMouseDown={isTop ? onDown : undefined}
+              onMouseMove={isTop ? onMove : undefined}
+              onMouseUp={isTop ? onUp : undefined}
+              onMouseLeave={isTop ? onUp : undefined}
+              onTouchStart={isTop ? onDown : undefined}
+              onTouchMove={isTop ? onMove : undefined}
+              onTouchEnd={isTop ? onUp : undefined}
+              style={{
+                position: "absolute", inset: 0,
+                transform: isTop
+                  ? `translateX(${drag.dx}px) rotate(${rotate}deg)`
+                  : `scale(${1 - stackI * 0.04}) translateY(${stackI * 10}px)`,
+                transition: drag.dragging ? "none" : "transform 0.25s ease",
+                cursor: isTop ? "grab" : "default",
+                zIndex: 10 - stackI,
+                touchAction: "none",
+              }}
+            >
+              <div style={{ position: "relative", width: "100%", height: "100%", background: N.white, border: `1px solid ${N.grey4}`, overflow: "hidden" }}>
+                <Placeholder w="100%" h="72%" label={p.name} />
+                <div style={{ padding: 14 }}>
+                  <div style={{ fontSize: 14, color: N.black }}>{p.name}</div>
+                  <div style={{ fontSize: 12, color: N.grey2, marginTop: 4 }}>₹{p.price.toLocaleString("en-IN")}</div>
+                  <div style={{ display: "flex", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
+                    {p.tags.map((t) => (
+                      <span key={t} style={{ fontSize: 8, letterSpacing: "0.08em", textTransform: "uppercase", border: `0.5px solid ${N.grey3}`, padding: "2px 6px", color: N.grey2 }}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+                {isTop && (
+                  <>
+                    <div style={{ position: "absolute", top: 16, left: 16, border: "3px solid #2e7d32", color: "#2e7d32", fontSize: 16, fontWeight: 700, padding: "3px 10px", transform: "rotate(-14deg)", letterSpacing: "0.08em", opacity: likeOpacity }}>LIKE</div>
+                    <div style={{ position: "absolute", top: 16, right: 16, border: "3px solid #c0392b", color: "#c0392b", fontSize: 16, fontWeight: 700, padding: "3px 10px", transform: "rotate(14deg)", letterSpacing: "0.08em", opacity: passOpacity }}>SKIP</div>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 20, justifyContent: "center", marginTop: 20 }}>
+        <button onClick={() => commit("dislike")} style={{ width: 52, height: 52, borderRadius: "50%", border: `1px solid ${N.grey3}`, background: N.white, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c0392b" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </button>
+        <button onClick={() => commit("like")} style={{ width: 52, height: 52, borderRadius: "50%", border: "none", background: N.black, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Icon name="heart" size={20} color={N.white} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const SwipeScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <TopNav
+      left={<Icon name="arrow-left" size={18} onClick={() => go("discover")} />}
+      center={<span style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" }}>For you</span>}
+    />
+    <Scroll>
+      <SwipeDeck go={go} />
+    </Scroll>
+  </div>
+);
+
+// ════════════════════════════════════════════════════════════════════════════
+// SCREENS
+// ════════════════════════════════════════════════════════════════════════════
+
+const SplashScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column", background: N.white, overflow: "hidden" }}>
+    <Banner text="Free shipping on orders above ₹1,000" />
+    <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+      <Placeholder w="100%" h="100%" label="Hero — Nicobar home collection campaign image" style={{ position: "absolute", inset: 0, height: "100%" }} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)" }} />
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 24 }}>
+        <div style={{ fontSize: 9, letterSpacing: "0.24em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 6 }}>Nicobar Home</div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, fontWeight: 300, color: N.white, lineHeight: 1.2, marginBottom: 8 }}>
+          A home that<br />tells your story.
+        </div>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", lineHeight: 1.7, marginBottom: 24, letterSpacing: "0.03em" }}>
+          Discover dining and decor curated<br />for the way you actually live.
+        </div>
+        <BtnPrimary onClick={() => go("login")} style={{ background: N.white, color: N.black, marginBottom: 10 }}>
+          Get started
+        </BtnPrimary>
+        <button
+          onClick={() => go("login")}
+          style={{ width: "100%", padding: "13px", background: "transparent", border: "1px solid rgba(255,255,255,0.5)", color: N.white, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" }}
+        >
+          Sign in
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+const LoginScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <TopNav
+      left={<Icon name="arrow-left" size={18} onClick={() => go("splash")} />}
+      center={<NicobarLogo />}
+    />
+    <Scroll>
+      <div style={{ padding: "28px 20px" }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 300, color: N.black, marginBottom: 6 }}>Welcome back.</div>
+        <div style={{ fontSize: 12, color: N.grey1, lineHeight: 1.75, marginBottom: 26, letterSpacing: "0.02em" }}>
+          Sign in with the email or mobile linked to your Nicobar account.
+        </div>
+        <Input label="Email address" type="email" placeholder="you@example.com" />
+        <div style={{ textAlign: "right", marginTop: -8, marginBottom: 16 }}>
+          <span style={{ fontSize: 10, letterSpacing: "0.08em", color: N.grey2, cursor: "pointer", textDecoration: "underline", textTransform: "uppercase" }} onClick={() => go("forgot")}>
+            Forgot email?
+          </span>
+        </div>
+        <Divider label="or" />
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: N.grey2, marginBottom: 6 }}>Mobile number</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ width: 54, padding: "13px 8px", border: `1px solid ${N.grey4}`, fontSize: 12, color: N.black, textAlign: "center", background: N.grey5 }}>+91</div>
+            <input style={{ flex: 1, padding: "13px 14px", border: `1px solid ${N.grey4}`, fontSize: 13, color: N.black, outline: "none", fontFamily: "'Jost', sans-serif" }} placeholder="98765 43210" type="tel" />
+          </div>
+        </div>
+        <BtnPrimary onClick={() => go("otp")}>Send OTP</BtnPrimary>
+        <Divider label="or continue with" />
+        <button
+          style={{
+            width: "100%", padding: "13px", border: `1px solid ${N.grey4}`, background: N.white,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif",
+          }}
+        >
+          <Icon name="google" size={16} color={N.grey1} /> Continue with Google
+        </button>
+        <p style={{ fontSize: 10, color: N.grey3, textAlign: "center", marginTop: 20, lineHeight: 1.7, letterSpacing: "0.02em" }}>
+          By continuing you agree to our <span style={{ color: N.grey1, textDecoration: "underline" }}>Terms</span> and <span style={{ color: N.grey1, textDecoration: "underline" }}>Privacy Policy</span>
+        </p>
+      </div>
+    </Scroll>
+  </div>
+);
+
+const ForgotScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <TopNav
+      left={<Icon name="arrow-left" size={18} onClick={() => go("login")} />}
+      center={<span style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: N.black }}>Find your account</span>}
+    />
+    <Scroll>
+      <div style={{ padding: "28px 20px" }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 300, color: N.black, marginBottom: 6 }}>
+          Can't remember<br />your email?
+        </div>
+        <div style={{ fontSize: 12, color: N.grey1, lineHeight: 1.75, marginBottom: 24, letterSpacing: "0.02em" }}>
+          Enter the mobile number you used when placing orders — we'll find your account.
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: N.grey2, marginBottom: 6 }}>Mobile number</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ width: 54, padding: "13px 8px", border: `1px solid ${N.grey4}`, fontSize: 12, textAlign: "center", background: N.grey5 }}>+91</div>
+            <input style={{ flex: 1, padding: "13px 14px", border: `1px solid ${N.grey4}`, fontSize: 13, outline: "none", fontFamily: "'Jost', sans-serif" }} placeholder="98765 43210" type="tel" />
+          </div>
+        </div>
+        <BtnPrimary onClick={() => go("found")}>Find my account</BtnPrimary>
+        <Divider label="or try another way" />
+        <Input label="Look up by order ID" placeholder="e.g. NIC-18872" />
+        <p style={{ fontSize: 11, color: N.grey2, marginTop: -6, marginBottom: 20, lineHeight: 1.7, letterSpacing: "0.02em" }}>
+          Find your order ID on a delivery email, SMS, or bag receipt.
+        </p>
+        <div style={{ background: N.grey5, border: `1px solid ${N.grey4}`, padding: "14px 16px" }}>
+          <SectionLabel style={{ marginBottom: 6 }}>Need more help?</SectionLabel>
+          <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.7, letterSpacing: "0.02em" }}>
+            Our team can verify your identity manually.{" "}
+            <span style={{ color: N.black, textDecoration: "underline", cursor: "pointer" }}>Contact support</span>
+          </p>
+        </div>
+      </div>
+    </Scroll>
+  </div>
+);
+
+const EmailFoundScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <TopNav center={<span style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" }}>Account found</span>} />
+    <Scroll>
+      <div style={{ padding: "28px 20px" }}>
+        <div style={{ textAlign: "center", marginBottom: 26 }}>
+          <div style={{ width: 52, height: 52, border: `1px solid ${N.black}`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+            <Icon name="check" size={20} color={N.black} />
+          </div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 300, color: N.black, marginBottom: 6 }}>We found your account.</div>
+          <div style={{ fontSize: 12, color: N.grey1, letterSpacing: "0.02em" }}>Your email on file is</div>
+        </div>
+        <div style={{ border: `1px solid ${N.grey4}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, background: N.grey5, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={N.grey2} strokeWidth="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: N.black, letterSpacing: "0.02em" }}>p*****a@gmail.com</div>
+            <div style={{ fontSize: 10, color: N.grey2, marginTop: 2 }}>Linked to 24 Nicobar orders</div>
+          </div>
+        </div>
+        <div style={{ background: N.grey5, border: `1px solid ${N.grey4}`, padding: "12px 16px", marginBottom: 20 }}>
+          <SectionLabel style={{ marginBottom: 4 }}>Why is it masked?</SectionLabel>
+          <p style={{ fontSize: 11, color: N.grey1, lineHeight: 1.7, letterSpacing: "0.02em" }}>
+            We partially hide your email to protect your account. Sign in with OTP to access it fully.
+          </p>
+        </div>
+        <BtnPrimary onClick={() => go("otp")} style={{ marginBottom: 10 }}>Sign in with OTP</BtnPrimary>
+        <BtnOutline onClick={() => go("otp")}>Try signing in with this email</BtnOutline>
+        <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: N.grey2, letterSpacing: "0.02em" }}>
+          Not your account?{" "}
+          <span style={{ color: N.black, textDecoration: "underline", cursor: "pointer" }} onClick={() => go("forgot")}>Try a different number</span>
+        </div>
+      </div>
+    </Scroll>
+  </div>
+);
+
+const OtpScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <TopNav
+      left={<Icon name="arrow-left" size={18} onClick={() => go("login")} />}
+      center={<span style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" }}>Verify</span>}
+    />
+    <Scroll>
+      <div style={{ padding: "28px 20px" }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 300, color: N.black, marginBottom: 6 }}>Check your phone.</div>
+        <div style={{ fontSize: 12, color: N.grey1, letterSpacing: "0.02em", lineHeight: 1.7, marginBottom: 4 }}>We sent a 4-digit code to</div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: N.black, letterSpacing: "0.04em", marginBottom: 6 }}>+91 98765 43210</div>
+        <OtpBoxes values={["8", "4", "2", ""]} />
+        <div style={{ textAlign: "center", marginBottom: 28, fontSize: 11, color: N.grey2, letterSpacing: "0.04em" }}>
+          Resend in <span style={{ color: N.black }}>0:42</span>
+        </div>
+        <BtnPrimary onClick={() => go("onb1")}>Verify & Sign in</BtnPrimary>
+        <div style={{ background: N.grey5, border: `1px solid ${N.grey4}`, padding: "14px 16px", marginTop: 20 }}>
+          <SectionLabel style={{ marginBottom: 6 }}>What happens next</SectionLabel>
+          <p style={{ fontSize: 11, color: N.grey1, lineHeight: 1.75, letterSpacing: "0.02em" }}>
+            Your Nicobar account will sync all past home & dining purchases — your collection is ready the moment you sign in.
+          </p>
+        </div>
+      </div>
+    </Scroll>
+  </div>
+);
+
+const Onboard1Screen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px", background: N.white }}>
+      <NicobarLogo size={16} />
+      <span style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: N.grey2, cursor: "pointer" }} onClick={() => go("discover")}>Skip</span>
+    </div>
+    <Placeholder w="100%" h={220} label="Nicobar home campaign — dining & decor styled shoot" />
+    <Scroll>
+      <div style={{ padding: "22px 20px" }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 300, color: N.black, lineHeight: 1.25, marginBottom: 8 }}>
+          A home that<br />feels like you.
+        </div>
+        <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.8, letterSpacing: "0.02em", marginBottom: 22 }}>
+          Browse Nicobar's dining and decor, see pieces in your actual space, and meet the makers behind each piece.
+        </p>
+        {[
+          { n: "01", title: "Browse curated home looks", sub: "Styled each season by Nicobar's design team" },
+          { n: "02", title: "See pieces in your space", sub: "Upload a photo and place items inside your actual room" },
+          { n: "03", title: "Meet the makers", sub: "Stories from the artisans who craft each piece" },
+        ].map((s) => (
+          <div key={s.n} style={{ display: "flex", gap: 14, marginBottom: 16, paddingBottom: 16, borderBottom: `0.5px solid ${N.grey4}` }}>
+            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 13, color: N.grey3, flexShrink: 0, paddingTop: 2 }}>{s.n}</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 500, color: N.black, letterSpacing: "0.04em", marginBottom: 3 }}>{s.title}</div>
+              <div style={{ fontSize: 11, color: N.grey2, lineHeight: 1.6, letterSpacing: "0.02em" }}>{s.sub}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Scroll>
+    <div style={{ padding: "0 20px 20px" }}>
+      <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 14 }}>
+        <div style={{ width: 24, height: 2, background: N.black }} />
+        <div style={{ width: 8, height: 2, background: N.grey4 }} />
+      </div>
+      <BtnPrimary onClick={() => go("onb2")}>Next</BtnPrimary>
+    </div>
+  </div>
+);
+
+const Onboard2Screen = ({ go }) => {
+  const [sel, setSel] = useState(0);
+  const opts = [
+    "Warm & earthy — terracotta, wood, linen",
+    "Minimal & modern — clean, neutral, spare",
+    "Eclectic & artful — layered, collected, bold",
+    "Breezy & coastal — light, natural, open",
+  ];
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px" }}>
+        <NicobarLogo size={16} />
+        <span style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: N.grey2, cursor: "pointer" }} onClick={() => go("discover")}>Skip</span>
+      </div>
+      <Scroll>
+        <div style={{ padding: "20px 20px" }}>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 300, color: N.black, lineHeight: 1.3, marginBottom: 6 }}>
+            How would you describe<br />your home?
+          </div>
+          <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.75, letterSpacing: "0.02em", marginBottom: 22 }}>
+            We'll suggest looks that match your space. You can always update this later.
+          </p>
+          {opts.map((o, i) => (
+            <button
+              key={i}
+              onClick={() => setSel(i)}
+              style={{
+                width: "100%", padding: "14px 16px", marginBottom: 8, textAlign: "left",
+                border: `1px solid ${sel === i ? N.black : N.grey4}`,
+                background: sel === i ? N.black : N.white,
+                color: sel === i ? N.white : N.black,
+                fontSize: 12, letterSpacing: "0.02em", fontFamily: "'Jost', sans-serif",
+                display: "flex", alignItems: "center", gap: 10,
+              }}
+            >
+              <div style={{ width: 16, height: 16, borderRadius: "50%", border: `1px solid ${sel === i ? N.white : N.grey3}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {sel === i && <div style={{ width: 8, height: 8, borderRadius: "50%", background: N.white }} />}
+              </div>
+              {o}
+            </button>
+          ))}
+        </div>
+      </Scroll>
+      <div style={{ padding: "0 20px 20px" }}>
+        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 14 }}>
+          <div style={{ width: 8, height: 2, background: N.grey4 }} />
+          <div style={{ width: 24, height: 2, background: N.black }} />
+        </div>
+        <BtnPrimary onClick={() => go("discover")}>Show me styled looks</BtnPrimary>
+      </div>
+    </div>
+  );
+};
+
+const DiscoverScreen = ({ go }) => {
+  const [filter, setFilter] = useState("All looks");
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <Banner text="Monsoon 25 is here — new dining & decor" />
+      <TopNav
+        left={<Icon name="menu" size={18} />}
+        center={<NicobarLogo />}
+        right={
+          <div style={{ display: "flex", gap: 12 }}>
+            <Icon name="search" size={18} />
+            <Icon name="bag" size={18} onClick={() => go("cart")} />
+          </div>
+        }
+      />
+      <Scroll>
+        <div style={{ padding: "16px 16px 0" }}>
+          <div style={{ background: N.grey5, padding: "10px 14px", marginBottom: 16, display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={N.grey2} strokeWidth="1.5" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <p style={{ fontSize: 11, color: N.grey1, lineHeight: 1.6, letterSpacing: "0.02em" }}>
+              Curated for your <strong style={{ color: N.black, fontWeight: 500 }}>warm & earthy</strong> home
+            </p>
+          </div>
+          <ChipFilter
+            options={["All looks", "Dining", "Living room", "Under ₹5k", "New in"]}
+            active={filter}
+            onChange={setFilter}
+          />
+        </div>
+
+        {/* Styled looks — editorial, full rooms, before any plain product grid */}
+        <StyledLooksCarousel go={go} />
+
+        {/* Swipe CTA banner */}
+        <div onClick={() => go("swipe")} style={{ margin: "4px 16px 20px", background: N.black, color: N.white, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+          <Icon name="heart" size={20} color={N.white} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, letterSpacing: "0.04em", marginBottom: 2 }}>Swipe to find your style</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.65)" }}>Like or skip pieces — we'll recommend from there</div>
+          </div>
+          <Icon name="chevron-right" size={16} color="rgba(255,255,255,0.7)" />
+        </div>
+
+        {/* Plain product grid — comes after the styled looks, on purpose */}
+        <div style={{ padding: "0 16px 4px" }}>
+          <SectionLabel>Shop everything</SectionLabel>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+            {PRODUCTS.slice(0, 6).map((p) => (
+              <div key={p.name} onClick={() => go("product")} style={{ cursor: "pointer" }}>
+                <Placeholder aspect="3/4" label={p.name} />
+                <div style={{ fontSize: 11, color: N.black, marginTop: 8 }}>{p.name}</div>
+                <div style={{ fontSize: 10, color: N.grey2, marginTop: 2 }}>₹{p.price.toLocaleString("en-IN")}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Makers strip */}
+        <div style={{ borderTop: `1px solid ${N.grey4}`, padding: "20px 16px", background: N.grey5 }}>
+          <SectionLabel>The makers</SectionLabel>
+          <div style={{ display: "flex", gap: 12, overflowX: "auto" }}>
+            {[
+              { name: "Ramesh Kumar", craft: "Potter · Khurja, UP" },
+              { name: "Sunita Devi", craft: "Brass · Moradabad" },
+              { name: "Arjun Singh", craft: "Wood · Saharanpur" },
+            ].map(m => (
+              <div key={m.name} onClick={() => go("maker")} style={{ flexShrink: 0, width: 90, cursor: "pointer", textAlign: "center" }}>
+                <Placeholder w={90} h={90} style={{ borderRadius: "50%", margin: "0 auto 8px" }} />
+                <div style={{ fontSize: 10, color: N.black, letterSpacing: "0.02em" }}>{m.name}</div>
+                <div style={{ fontSize: 9, color: N.grey2, marginTop: 2, letterSpacing: "0.02em" }}>{m.craft}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ height: 20 }} />
+      </Scroll>
+      <BottomBar active="discover" go={go} />
+    </div>
+  );
+};
+
+const ProductScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <TopNav
+      left={<Icon name="arrow-left" size={18} onClick={() => go("discover")} />}
+      right={<div style={{ display: "flex", gap: 12 }}><Icon name="heart" size={18} /><Icon name="bag" size={18} onClick={() => go("cart")} /></div>}
+    />
+    <Scroll>
+      {/* Main image */}
+      <Placeholder w="100%" aspect="4/5" label="Valley Vase — product photography, white background, hero shot" />
+
+      {/* Thumbnail strip */}
+      <div style={{ display: "flex", gap: 1, padding: "1px 0" }}>
+        {[1, 2, 3, 4].map(i => (
+          <Placeholder key={i} w="25%" h={72} label={`View ${i}`} />
+        ))}
+      </div>
+
+      <div style={{ padding: "20px 16px" }}>
+        <div style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: N.grey2, marginBottom: 6 }}>Vases & Planters</div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 400, color: N.black, marginBottom: 4 }}>Valley Vase</div>
+        <div style={{ fontSize: 14, color: N.black, letterSpacing: "0.04em", marginBottom: 16 }}>₹4,600</div>
+
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 18 }}>
+          {["Aluminium", "Hand-finished", "Decor", "Gifting"].map(t => (
+            <span key={t} style={{ fontSize: 9, border: `0.5px solid ${N.grey3}`, padding: "3px 8px", color: N.grey1, letterSpacing: "0.08em", textTransform: "uppercase" }}>{t}</span>
+          ))}
+        </div>
+
+        <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.8, letterSpacing: "0.02em", marginBottom: 20 }}>
+          Terracotta in spirit, metal in form. The Valley Vase brings earthy charm without the fragility. Crafted in aluminium with a rich brown finish, it brings depth, texture, and a grounded silhouette to any surface. Perfect as a standalone accent or to hold a few faux stems.
+        </p>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          <BtnPrimary onClick={() => go("cart")} style={{ flex: 1 }}>Add to bag</BtnPrimary>
+          <button onClick={() => go("wishlist")} style={{ width: 52, border: `1px solid ${N.black}`, background: N.white, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon name="heart" size={18} color={N.black} />
+          </button>
+        </div>
+
+        <div style={{ borderTop: `1px solid ${N.grey4}`, paddingTop: 16, marginBottom: 16 }}>
+          <button onClick={() => go("room")} style={{ width: "100%", padding: "13px", border: `1px solid ${N.grey4}`, background: N.white, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <Icon name="camera" size={16} color={N.grey1} /> See in your space
+          </button>
+        </div>
+
+        <MakerCard
+          name="Ramesh Kumar"
+          role="Master Potter · 3rd generation"
+          location="Khurja, Uttar Pradesh"
+          quote="No two pieces come out exactly the same. That's what makes them alive."
+          go={go}
+        />
+
+        <div style={{ borderTop: `1px solid ${N.grey4}`, marginTop: 20, paddingTop: 16 }}>
+          <SectionLabel>Care & craft</SectionLabel>
+          <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.8, letterSpacing: "0.02em" }}>
+            Crafted in aluminium with a hand-applied rich brown finish. Wipe clean with a soft, damp cloth. Do not use abrasive substances.
+          </p>
+        </div>
+
+        <div style={{ borderTop: `1px solid ${N.grey4}`, marginTop: 16, paddingTop: 16 }}>
+          <SectionLabel>You might also like</SectionLabel>
+          <div style={{ display: "flex", gap: 10, overflowX: "auto" }}>
+            {["Nadi Vase", "Palm Mug", "Diya Set", "Taper Candles"].map(n => (
+              <div key={n} style={{ flexShrink: 0, width: 110 }}>
+                <Placeholder w={110} aspect="3/4" label={n} />
+                <div style={{ fontSize: 10, color: N.black, marginTop: 6 }}>{n}</div>
+                <div style={{ fontSize: 10, color: N.grey2, marginTop: 2 }}>₹1,890</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ height: 20 }} />
+      </div>
+    </Scroll>
+  </div>
+);
+
+const MakerScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <TopNav
+      left={<Icon name="arrow-left" size={18} onClick={() => go("product")} />}
+      center={<span style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" }}>Maker story</span>}
+      right={<Icon name="share" size={18} />}
+    />
+    <Scroll>
+      <Placeholder w="100%" h={220} label="Ramesh Kumar at work — pottery wheel, Khurja UP" />
+      <div style={{ padding: "20px 16px" }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 400, color: N.black, marginBottom: 3 }}>Ramesh Kumar</div>
+        <div style={{ fontSize: 11, color: N.grey2, letterSpacing: "0.04em", marginBottom: 4 }}>Master Potter · Khurja Pottery Tradition</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 18, fontSize: 11, color: N.grey2 }}>
+          <Icon name="map-pin" size={11} color={N.grey2} />
+          Khurja, Uttar Pradesh · With Nicobar since 2019
+        </div>
+
+        <div style={{ display: "flex", gap: 1, marginBottom: 18 }}>
+          {[["3rd", "Generation"], ["22", "Years craft"], ["5", "This season"]].map(([n, l]) => (
+            <div key={l} style={{ flex: 1, background: N.grey5, padding: "12px 8px", textAlign: "center", border: `0.5px solid ${N.grey4}` }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: N.black }}>{n}</div>
+              <div style={{ fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase", color: N.grey2, marginTop: 3 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ paddingLeft: 14, borderLeft: `2px solid ${N.black}`, marginBottom: 18 }}>
+          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontStyle: "italic", color: N.grey1, lineHeight: 1.75 }}>
+            "My father taught me that clay is alive. You can't force it — you have to work with what it wants to do. Every piece I make carries that lesson."
+          </p>
+          <p style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: N.grey3, marginTop: 8 }}>— Ramesh Kumar</p>
+        </div>
+
+        <SectionLabel>His story</SectionLabel>
+        <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.85, letterSpacing: "0.02em", marginBottom: 20 }}>
+          Ramesh learned the wheel at age 12, watching his father and grandfather work in their small workshop off the Khurja bazaar. Khurja has been India's pottery capital for over 600 years — supplying everything from temple vessels to hotel crockery. Nicobar found him through a craft fair in Delhi in 2019. The Valley Vase collection is now in its third season and among the brand's best-loved pieces.
+        </p>
+
+        <SectionLabel>Watch him work</SectionLabel>
+        <div style={{ position: "relative", marginBottom: 20 }}>
+          <Placeholder w="100%" h={140} label="Video — Ramesh at the wheel, 2 min" />
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={N.white}><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <SectionLabel>His pieces this season</SectionLabel>
+        <div style={{ display: "flex", gap: 10, overflowX: "auto", marginBottom: 20 }}>
+          {["Valley Vase — ₹4,600", "Clay Tea Pot — ₹2,890", "Chai Cups ×4 — ₹2,290", "Spice Jar Set — ₹1,490"].map(n => (
+            <div key={n} onClick={() => go("product")} style={{ flexShrink: 0, width: 100, cursor: "pointer" }}>
+              <Placeholder w={100} aspect="1/1" label={n.split("—")[0].trim()} />
+              <div style={{ fontSize: 10, color: N.black, marginTop: 6 }}>{n.split("—")[0].trim()}</div>
+              <div style={{ fontSize: 10, color: N.grey2, marginTop: 2 }}>{n.split("—")[1]?.trim()}</div>
+            </div>
+          ))}
+        </div>
+        <BtnPrimary onClick={() => go("discover")}>Shop Ramesh's pieces</BtnPrimary>
+        <div style={{ height: 20 }} />
+      </div>
+    </Scroll>
+  </div>
+);
+
+const RoomScreen = ({ go }) => {
+  const [sel, setSel] = useState("Valley Vase");
+  const pieces = ["Valley Vase", "Indigo Plates", "Taper Candles", "Rattan Mirror"];
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <TopNav
+        left={<Icon name="arrow-left" size={18} onClick={() => go("discover")} />}
+        center={<span style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" }}>My Room</span>}
+        right={<Icon name="camera" size={18} />}
+      />
+      <Scroll>
+        <div style={{ padding: "16px 16px 0" }}>
+          <SectionLabel>Your space</SectionLabel>
+          <div style={{ border: `1px solid ${N.grey4}`, padding: 12, marginBottom: 18, background: N.grey5 }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: N.grey2, marginBottom: 8 }}>Living room — uploaded photo</div>
+            <Placeholder w="100%" h={130} label="Your room photo will appear here — tap to place pieces" />
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              {["Retake", "Upload new"].map(l => (
+                <button key={l} style={{ padding: "7px 12px", border: `1px solid ${N.grey4}`, background: N.white, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif", color: N.grey1, display: "flex", alignItems: "center", gap: 5 }}>
+                  <Icon name={l === "Retake" ? "camera" : "upload"} size={11} color={N.grey2} /> {l}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <SectionLabel>Place a piece</SectionLabel>
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 14 }}>
+            {pieces.map(p => (
+              <div key={p} onClick={() => setSel(p)} style={{ flexShrink: 0, width: 80, border: `1px solid ${sel === p ? N.black : N.grey4}`, cursor: "pointer" }}>
+                <Placeholder w={80} h={72} label={p} />
+                <div style={{ padding: "5px 6px", fontSize: 9, color: N.black, letterSpacing: "0.04em", lineHeight: 1.3 }}>{p}</div>
+              </div>
+            ))}
+          </div>
+
+          <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.7, letterSpacing: "0.02em", marginBottom: 14 }}>
+            <strong style={{ fontWeight: 500, color: N.black }}>{sel}</strong> selected — tap your room photo above to place it and see how it fits.
+          </p>
+
+          <div style={{ border: `1px solid ${N.grey4}`, padding: "12px 14px", marginBottom: 16, background: N.grey5 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <span style={{ fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: N.grey2 }}>Decor harmony</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: N.black }}>92%</span>
+            </div>
+            <div style={{ height: 3, background: N.grey4, marginBottom: 10 }}>
+              <div style={{ width: "92%", height: "100%", background: N.black }} />
+            </div>
+            <p style={{ fontSize: 11, color: N.grey1, lineHeight: 1.7, letterSpacing: "0.02em" }}>
+              Warm tones in your living room pair naturally with this piece — a grounded addition to the corner shelf.
+            </p>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            <BtnPrimary onClick={() => go("cart")} style={{ flex: 1 }}>Add to bag</BtnPrimary>
+            <BtnOutline onClick={() => go("wishlist")} style={{ flex: 1, marginTop: 0 }}>Wishlist</BtnOutline>
+          </div>
+        </div>
+      </Scroll>
+      <BottomBar active="room" go={go} />
+    </div>
+  );
+};
+
+const WishlistScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <TopNav
+      left={<Icon name="menu" size={18} />}
+      center={<NicobarLogo />}
+      right={<Icon name="share" size={18} />}
+    />
+    <Scroll>
+      <div style={{ padding: "16px 16px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: N.black }}>Wishlist</div>
+            <div style={{ fontSize: 10, color: N.grey2, marginTop: 2, letterSpacing: "0.04em" }}>4 pieces saved</div>
+          </div>
+          <button onClick={() => go("cart")} style={{ padding: "9px 16px", background: N.black, color: N.white, border: "none", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" }}>
+            Add all to bag
+          </button>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
+          {[
+            { name: "Valley Vase", sub: "Aluminium · Brown finish", price: "₹4,600" },
+            { name: "Brass Taper Candles", sub: "Set of 4 · Natural wax", price: "₹2,190" },
+            { name: "Indigo Dinner Plates", sub: "Set of 6 · Block print", price: "₹3,290" },
+            { name: "Rattan Wall Mirror", sub: "60cm · Natural weave", price: "₹4,490" },
+          ].map(p => (
+            <div key={p.name} style={{ background: N.white }}>
+              <Placeholder w="100%" aspect="1/1" label={p.name} />
+              <div style={{ padding: "10px 10px 6px" }}>
+                <div style={{ fontSize: 11, color: N.black, letterSpacing: "0.02em" }}>{p.name}</div>
+                <div style={{ fontSize: 10, color: N.grey2, marginTop: 2, letterSpacing: "0.02em" }}>{p.sub}</div>
+                <div style={{ fontSize: 11, color: N.black, marginTop: 5 }}>{p.price}</div>
+              </div>
+              <div style={{ display: "flex", borderTop: `1px solid ${N.grey4}` }}>
+                <button onClick={() => go("cart")} style={{ flex: 1, padding: "8px", background: N.black, color: N.white, border: "none", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" }}>
+                  Add to bag
+                </button>
+                <button style={{ width: 40, background: N.white, border: "none", borderLeft: `1px solid ${N.grey4}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Icon name="trash" size={14} color={N.grey2} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ textAlign: "center", padding: "22px 0" }}>
+          <p style={{ fontSize: 11, color: N.grey2, letterSpacing: "0.04em", marginBottom: 12 }}>Share your wishlist with someone special</p>
+          <BtnOutline style={{ maxWidth: 200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 10 }}>
+            <Icon name="share" size={14} color={N.black} /> Share wishlist
+          </BtnOutline>
+        </div>
+      </div>
+    </Scroll>
+    <BottomBar active="wishlist" go={go} />
+  </div>
+);
+
+const PurchasesScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <TopNav
+      left={<Icon name="menu" size={18} />}
+      center={<NicobarLogo />}
+      right={<Icon name="search" size={18} />}
+    />
+    <Scroll>
+      <div style={{ padding: "16px 16px 0" }}>
+        {/* Member card */}
+        <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 16, borderBottom: `1px solid ${N.grey4}`, marginBottom: 16 }}>
+          <Placeholder w={48} h={48} style={{ borderRadius: "50%", flexShrink: 0 }} label="" />
+          <div>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, color: N.black }}>Priya Mehta</div>
+            <div style={{ fontSize: 10, color: N.grey2, marginTop: 2, letterSpacing: "0.04em" }}>Member since 2021</div>
+          </div>
+          <span style={{ marginLeft: "auto", fontSize: 8, letterSpacing: "0.14em", textTransform: "uppercase", border: `1px solid ${N.grey3}`, padding: "3px 8px", color: N.grey2 }}>Gold</span>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: "flex", gap: 1, marginBottom: 18 }}>
+          {[["18", "Orders"], ["47", "Pieces"], ["5", "Saved looks"]].map(([n, l]) => (
+            <div key={l} style={{ flex: 1, padding: "12px 8px", textAlign: "center", background: N.grey5, border: `0.5px solid ${N.grey4}` }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: N.black }}>{n}</div>
+              <div style={{ fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase", color: N.grey2, marginTop: 3 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+
+        <ChipFilter options={["All orders", "Dining", "Decor", "Gifting"]} active="All orders" onChange={() => {}} />
+
+        {/* Order cards */}
+        {[
+          { id: "NIC-20481", date: "12 June 2025", status: "Delivered", item: "Valley Vase", sub: "Aluminium · Rich brown finish", price: "₹4,600", more: 2 },
+          { id: "NIC-19104", date: "3 March 2025", status: "Delivered", item: "Indigo Dinner Plates", sub: "Set of 6 · Block print rim", price: "₹3,290", more: 0 },
+          { id: "NIC-18770", date: "18 Jan 2025", status: "In transit", item: "Brass Taper Candle Set", sub: "Set of 4 · Natural wax", price: "₹2,190", more: 0 },
+        ].map(o => (
+          <div key={o.id} style={{ border: `1px solid ${N.grey4}`, marginBottom: 10 }}>
+            <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", background: N.grey5, borderBottom: `1px solid ${N.grey4}` }}>
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: N.grey2 }}>Order #{o.id}</div>
+                <div style={{ fontSize: 10, color: N.grey2, marginTop: 2 }}>{o.date}</div>
+              </div>
+              <span style={{
+                fontSize: 8, letterSpacing: "0.1em", textTransform: "uppercase", padding: "3px 8px",
+                background: o.status === "Delivered" ? "#e8f5e9" : "#fff8e1",
+                color: o.status === "Delivered" ? "#2e7d32" : "#f57f17",
+                border: `0.5px solid ${o.status === "Delivered" ? "#a5d6a7" : "#ffe082"}`,
+              }}>
+                {o.status}
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 12, padding: "12px 14px" }}>
+              <Placeholder w={52} h={64} label={o.item} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, color: N.black, letterSpacing: "0.02em" }}>{o.item}</div>
+                <div style={{ fontSize: 10, color: N.grey2, marginTop: 2 }}>{o.sub}</div>
+                <div style={{ fontSize: 12, color: N.black, marginTop: 6 }}>{o.price}</div>
+                <button onClick={() => go("room")} style={{ marginTop: 8, padding: "5px 10px", background: N.white, border: `1px solid ${N.grey4}`, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif", color: N.grey1, display: "flex", alignItems: "center", gap: 5 }}>
+                  <Icon name="camera" size={11} color={N.grey2} /> See in your space
+                </button>
+              </div>
+            </div>
+            {o.more > 0 && (
+              <div style={{ padding: "8px 14px", borderTop: `1px solid ${N.grey4}`, display: "flex", justifyContent: "space-between", fontSize: 10, color: N.grey2, letterSpacing: "0.04em" }}>
+                <span>+{o.more} more items in this order</span>
+                <Icon name="chevron-down" size={14} color={N.grey3} />
+              </div>
+            )}
+          </div>
+        ))}
+        <div style={{ height: 20 }} />
+      </div>
+    </Scroll>
+    <BottomBar active="profile" go={go} />
+  </div>
+);
+
+const CartScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <TopNav
+      left={<Icon name="arrow-left" size={18} onClick={() => go("discover")} />}
+      center={<NicobarLogo />}
+      right={<span style={{ fontSize: 10, letterSpacing: "0.08em", color: N.grey2 }}>3 items</span>}
+    />
+    <Scroll>
+      <div style={{ padding: "0 16px" }}>
+        {/* Complete the look nudge */}
+        <div style={{ background: N.grey5, border: `1px solid ${N.grey4}`, padding: "12px 14px", margin: "16px 0", display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={N.grey2} strokeWidth="1.5" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 500, color: N.black, letterSpacing: "0.02em" }}>You have 2 of 3 pieces from The Monsoon Table.</div>
+            <div style={{ fontSize: 11, color: N.grey1, marginTop: 3, letterSpacing: "0.02em", cursor: "pointer" }}>Add the Valley Vase to complete the look →</div>
+          </div>
+        </div>
+
+        {[
+          { name: "Valley Vase", sub: "Aluminium · Brown finish", price: "₹4,600" },
+          { name: "Indigo Dinner Plates", sub: "Set of 6 · Block print rim", price: "₹3,290" },
+          { name: "Brass Taper Candles", sub: "Set of 4 · Natural wax", price: "₹2,190" },
+        ].map((item, i) => (
+          <div key={item.name} style={{ display: "flex", gap: 14, padding: "16px 0", borderBottom: `1px solid ${N.grey4}` }}>
+            <Placeholder w={72} h={88} label={item.name} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: N.black, letterSpacing: "0.02em" }}>{item.name}</div>
+              <div style={{ fontSize: 11, color: N.grey2, marginTop: 3, letterSpacing: "0.02em" }}>{item.sub}</div>
+              <div style={{ fontSize: 12, color: N.black, marginTop: 6, letterSpacing: "0.04em" }}>{item.price}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+                <div style={{ display: "flex", border: `1px solid ${N.grey4}` }}>
+                  <button style={{ width: 28, height: 28, background: N.white, border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon name="minus" size={12} color={N.grey1} />
+                  </button>
+                  <div style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: N.black, borderLeft: `1px solid ${N.grey4}`, borderRight: `1px solid ${N.grey4}` }}>1</div>
+                  <button style={{ width: 28, height: 28, background: N.white, border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon name="plus" size={12} color={N.grey1} />
+                  </button>
+                </div>
+                <span style={{ fontSize: 10, color: N.grey2, letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", textDecoration: "underline" }}>Remove</span>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Gift message */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 0", borderBottom: `1px solid ${N.grey4}`, cursor: "pointer" }}>
+          <Icon name="gift" size={16} color={N.grey2} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, color: N.black, letterSpacing: "0.02em" }}>Add a gift message</div>
+            <div style={{ fontSize: 10, color: N.grey2, marginTop: 2 }}>Make it special for someone</div>
+          </div>
+          <Icon name="chevron-right" size={14} color={N.grey3} />
+        </div>
+
+        {/* Summary */}
+        <div style={{ padding: "16px 0", borderBottom: `1px solid ${N.grey4}`, marginBottom: 16 }}>
+          {[["Subtotal", "₹10,080"], ["Shipping", "Free"], ["Gift wrapping", "₹199"]].map(([l, v]) => (
+            <div key={l} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12, color: v === "Free" ? "#2e7d32" : N.grey1, letterSpacing: "0.02em" }}>
+              <span>{l}</span><span>{v}</span>
+            </div>
+          ))}
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 500, color: N.black, borderTop: `1px solid ${N.grey4}`, paddingTop: 10, marginTop: 4 }}>
+            <span>Total</span><span>₹10,279</span>
+          </div>
+        </div>
+
+        <BtnPrimary onClick={() => go("checkout")} style={{ marginBottom: 20 }}>Proceed to checkout</BtnPrimary>
+      </div>
+    </Scroll>
+  </div>
+);
+
+const CheckoutScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <TopNav
+      left={<Icon name="arrow-left" size={18} onClick={() => go("cart")} />}
+      center={<NicobarLogo />}
+    />
+    <Scroll>
+      <div style={{ padding: "16px 16px" }}>
+        <StepProgress current={1} />
+
+        <SectionLabel>Deliver to</SectionLabel>
+        {[
+          { label: "Priya Mehta — Home", addr: "42 Gulmohar Park, New Delhi · 110049", active: true },
+          { label: "Priya Mehta — Office", addr: "Cyber Hub, Gurugram · 122002", active: false },
+        ].map(a => (
+          <div key={a.label} style={{ border: `1px solid ${a.active ? N.black : N.grey4}`, padding: "12px 14px", marginBottom: 8, cursor: "pointer" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: N.black, marginBottom: 4, letterSpacing: "0.02em" }}>{a.label}</div>
+                <div style={{ fontSize: 11, color: N.grey2, lineHeight: 1.6, letterSpacing: "0.02em" }}>{a.addr}</div>
+              </div>
+              <div style={{ width: 16, height: 16, borderRadius: "50%", border: `1px solid ${a.active ? N.black : N.grey3}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                {a.active && <div style={{ width: 8, height: 8, borderRadius: "50%", background: N.black }} />}
+              </div>
+            </div>
+          </div>
+        ))}
+        <button style={{ background: "none", border: "none", fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: N.grey2, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, marginBottom: 20, textDecoration: "underline" }}>
+          <Icon name="plus" size={12} color={N.grey2} /> Add new address
+        </button>
+
+        <SectionLabel>Payment</SectionLabel>
+        {[
+          { icon: "sparkle", label: "UPI", sub: "priya@okaxis", active: true },
+          { icon: "bag", label: "Credit card", sub: "•••• 4821", active: false },
+          { icon: "home", label: "Net banking / COD", sub: "", active: false },
+        ].map(p => (
+          <div key={p.label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", border: `1px solid ${p.active ? N.black : N.grey4}`, marginBottom: 8, cursor: "pointer" }}>
+            <div style={{ width: 16, height: 16, borderRadius: "50%", border: `1px solid ${p.active ? N.black : N.grey3}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {p.active && <div style={{ width: 8, height: 8, borderRadius: "50%", background: N.black }} />}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: N.black, letterSpacing: "0.02em" }}>{p.label}</div>
+              {p.sub && <div style={{ fontSize: 10, color: N.grey2, marginTop: 2 }}>{p.sub}</div>}
+            </div>
+          </div>
+        ))}
+
+        <div style={{ border: `1px solid ${N.grey4}`, padding: "14px", margin: "16px 0" }}>
+          {[["3 items", "₹10,080"], ["Shipping", "Free"], ["Gift wrapping", "₹199"]].map(([l, v]) => (
+            <div key={l} style={{ display: "flex", justifyContent: "space-between", marginBottom: 7, fontSize: 11, color: N.grey1 }}>
+              <span>{l}</span><span>{v}</span>
+            </div>
+          ))}
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 500, color: N.black, borderTop: `1px solid ${N.grey4}`, paddingTop: 10, marginTop: 4 }}>
+            <span>Total</span><span>₹10,279</span>
+          </div>
+        </div>
+
+        <BtnPrimary onClick={() => go("confirmed")} style={{ marginBottom: 20 }}>Place order — ₹10,279</BtnPrimary>
+      </div>
+    </Scroll>
+  </div>
+);
+
+const ConfirmedScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column", background: N.grey5 }}>
+    <TopNav center={<NicobarLogo />} />
+    <Scroll>
+      <div style={{ padding: "32px 20px", textAlign: "center" }}>
+        <div style={{ width: 56, height: 56, border: `1px solid ${N.black}`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <Icon name="check" size={22} color={N.black} />
+        </div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 300, color: N.black, marginBottom: 6 }}>Order placed.</div>
+        <div style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: N.grey2, marginBottom: 6 }}>Order #NIC-21034</div>
+        <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.8, letterSpacing: "0.03em", marginBottom: 28, maxWidth: 260, margin: "0 auto 28px" }}>
+          Your 3 pieces are being packed with care and will arrive in 4–6 working days.
+        </p>
+        <div style={{ background: N.white, border: `1px solid ${N.grey4}`, padding: 16, marginBottom: 14, textAlign: "left" }}>
+          <SectionLabel>What's in your order</SectionLabel>
+          {["Valley Vase", "Indigo Dinner Plates", "Brass Taper Candles"].map(n => (
+            <div key={n} style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
+              <Placeholder w={40} h={40} label="" />
+              <span style={{ fontSize: 12, color: N.black, letterSpacing: "0.02em" }}>{n}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: N.white, border: `1px solid ${N.grey4}`, padding: 14, marginBottom: 24, textAlign: "left" }}>
+          <SectionLabel>A style tip</SectionLabel>
+          <p style={{ fontSize: 11, color: N.grey1, lineHeight: 1.75, letterSpacing: "0.02em" }}>
+            Once your pieces arrive, add them to My Room to see how to style them together in your actual space.
+          </p>
+        </div>
+        <BtnPrimary onClick={() => go("discover")} style={{ marginBottom: 10 }}>Continue exploring</BtnPrimary>
+        <BtnOutline onClick={() => go("purchases")} style={{ background: N.grey5 }}>View my orders</BtnOutline>
+      </div>
+    </Scroll>
+  </div>
+);
+
+const ProfileScreen = ({ go }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <TopNav
+      left={<Icon name="menu" size={18} />}
+      center={<NicobarLogo />}
+    />
+    <Scroll>
+      <div style={{ padding: "20px 16px" }}>
+        {/* Profile header */}
+        <div style={{ textAlign: "center", paddingBottom: 20, borderBottom: `1px solid ${N.grey4}`, marginBottom: 20 }}>
+          <Placeholder w={64} h={64} style={{ borderRadius: "50%", margin: "0 auto 12px" }} />
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: N.black }}>Priya Mehta</div>
+          <div style={{ fontSize: 10, color: N.grey2, marginTop: 4, letterSpacing: "0.04em" }}>p*****a@gmail.com</div>
+          <div style={{ display: "inline-block", fontSize: 8, letterSpacing: "0.14em", textTransform: "uppercase", border: `1px solid ${N.grey3}`, padding: "3px 10px", color: N.grey2, marginTop: 8 }}>Gold member</div>
+        </div>
+
+        <SectionLabel>My home style</SectionLabel>
+        <div style={{ border: `1px solid ${N.grey4}`, padding: "14px 16px", marginBottom: 20, background: N.grey5 }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: N.black, marginBottom: 4, letterSpacing: "0.02em" }}>Warm & earthy</div>
+          <div style={{ fontSize: 11, color: N.grey1, lineHeight: 1.65, letterSpacing: "0.02em" }}>Terracotta, wood, linen — grounded and tactile</div>
+          <div style={{ fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: N.grey2, marginTop: 10, cursor: "pointer", textDecoration: "underline" }}>Change preference</div>
+        </div>
+
+        <SectionLabel>Account</SectionLabel>
+        <div style={{ border: `1px solid ${N.grey4}` }}>
+          {[
+            { label: "Order history", icon: "bag", screen: "purchases" },
+            { label: "Saved wishlist", icon: "heart", screen: "wishlist" },
+            { label: "Notifications", icon: "star", screen: null },
+            { label: "My Room photos", icon: "camera", screen: "room" },
+          ].map((r, i) => (
+            <div
+              key={r.label}
+              onClick={() => r.screen && go(r.screen)}
+              style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "13px 16px",
+                borderTop: i > 0 ? `1px solid ${N.grey4}` : "none",
+                cursor: r.screen ? "pointer" : "default",
+              }}
+            >
+              <Icon name={r.icon} size={16} color={N.grey2} />
+              <span style={{ flex: 1, fontSize: 12, color: N.black, letterSpacing: "0.02em" }}>{r.label}</span>
+              <Icon name="chevron-right" size={14} color={N.grey3} />
+            </div>
+          ))}
+        </div>
+
+        <BtnOutline onClick={() => go("splash")} style={{ marginTop: 20, marginBottom: 8 }}>Sign out</BtnOutline>
+
+        <div style={{ textAlign: "center", padding: "16px 0" }}>
+          <NicobarLogo size={14} color={N.grey3} />
+          <div style={{ fontSize: 9, color: N.grey3, marginTop: 4, letterSpacing: "0.08em" }}>Nicobar Design Pvt. Ltd. © 2025</div>
+        </div>
+      </div>
+    </Scroll>
+    <BottomBar active="profile" go={go} />
+  </div>
+);
+
+// ════════════════════════════════════════════════════════════════════════════
+// SCREEN REGISTRY
+// ════════════════════════════════════════════════════════════════════════════
+
+const ALL_SCREENS = [
+  "splash", "login", "forgot", "found", "otp",
+  "onb1", "onb2", "discover", "swipe", "product", "maker",
+  "room", "wishlist", "purchases", "cart", "checkout",
+  "confirmed", "profile",
+];
+
+// ════════════════════════════════════════════════════════════════════════════
+// APP
+// ════════════════════════════════════════════════════════════════════════════
+
+function NicobarApp() {
+  const [screen, setScreen] = useState("splash");
+  const go = (s) => setScreen(s);
+
+  const screens = {
+    splash: <SplashScreen go={go} />,
+    login: <LoginScreen go={go} />,
+    forgot: <ForgotScreen go={go} />,
+    found: <EmailFoundScreen go={go} />,
+    otp: <OtpScreen go={go} />,
+    onb1: <Onboard1Screen go={go} />,
+    onb2: <Onboard2Screen go={go} />,
+    discover: <DiscoverScreen go={go} />,
+    swipe: <SwipeScreen go={go} />,
+    product: <ProductScreen go={go} />,
+    maker: <MakerScreen go={go} />,
+    room: <RoomScreen go={go} />,
+    wishlist: <WishlistScreen go={go} />,
+    purchases: <PurchasesScreen go={go} />,
+    cart: <CartScreen go={go} />,
+    checkout: <CheckoutScreen go={go} />,
+    confirmed: <ConfirmedScreen go={go} />,
+    profile: <ProfileScreen go={go} />,
+  };
+
+  return (
+    <>
+      <style>{globalStyle}</style>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 8px 32px", minHeight: "100vh", gap: 14 }}>
+
+        {/* Header */}
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: "0.22em", textTransform: "uppercase", color: "#888", marginBottom: 4 }}>Nicobar Home — App Prototype</div>
+          <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, color: "#aaa", letterSpacing: "0.08em" }}>Image placeholders shown — replace with Nicobar photography</div>
+        </div>
+
+        {/* Screen selector */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center", maxWidth: 540 }}>
+          {ALL_SCREENS.map(s => (
+            <button
+              key={s}
+              onClick={() => go(s)}
+              style={{
+                padding: "5px 10px", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase",
+                border: `1px solid ${screen === s ? "#1a1a1a" : "#ccc"}`,
+                background: screen === s ? "#1a1a1a" : "#fff",
+                color: screen === s ? "#fff" : "#666",
+                fontFamily: "'Jost', sans-serif", cursor: "pointer",
+              }}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+
+        {/* Phone */}
+        <Phone>
+          {screens[screen]}
+        </Phone>
+
+        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, color: "#aaa", letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "center" }}>
+          Tap buttons inside the phone to navigate · Or use the screen selector above
+        </div>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(NicobarApp));
+    </script>
+    <script>
+      var source = document.getElementById('app-source').textContent;
+      var output = Babel.transform(source, { presets: [["react", { runtime: "classic" }]] }).code;
+      (0, eval)(output);
+    </script>
+  </body>
+</html>

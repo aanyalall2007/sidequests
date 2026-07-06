@@ -1,0 +1,1223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nicobar Home — Website Prototype</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/plain" id="app-source">
+const { useState } = React;
+
+// ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
+const FONT_URL =
+  "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap";
+
+const N = {
+  white: "#FFFFFF",
+  black: "#1a1a1a",
+  grey1: "#4a4a4a",
+  grey2: "#888888",
+  grey3: "#bbbbbb",
+  grey4: "#e8e8e8",
+  grey5: "#f5f5f5",
+  grey6: "#f0f0f0",
+  cream: "#faf7f2",
+  creamDark: "#f0ebe1",
+};
+
+const globalStyle = `
+@import url('${FONT_URL}');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Jost', sans-serif; background: ${N.cream}; color: ${N.black}; }
+input, button, select, textarea { font-family: 'Jost', sans-serif; }
+button { cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: ${N.grey3}; }
+.nic-grid { display: grid; gap: 24px; grid-template-columns: repeat(4, 1fr); }
+.nic-grid-2 { display: grid; gap: 24px; grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 980px) { .nic-grid { grid-template-columns: repeat(2, 1fr); } .nic-grid-2 { grid-template-columns: 1fr; } .nic-hide-mobile { display: none; } .nic-checkout-cols, .nic-cart-cols, .nic-product-cols, .nic-room-cols { grid-template-columns: 1fr !important; } }
+`;
+
+// ─── PLACEHOLDER IMAGE ──────────────────────────────────────────────────────
+const Placeholder = ({ w, h, label = "", style = {}, aspect }) => (
+  <div
+    style={{
+      width: w || "100%", height: h, aspectRatio: aspect, background: N.grey6,
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      flexShrink: 0, ...style,
+    }}
+  >
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={N.grey3} strokeWidth="1.2">
+      <rect x="3" y="3" width="18" height="18" rx="1" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+    {label && (
+      <span style={{ fontSize: 10, color: N.grey3, marginTop: 6, letterSpacing: "0.08em", textTransform: "uppercase", textAlign: "center", padding: "0 12px" }}>
+        {label}
+      </span>
+    )}
+  </div>
+);
+
+const NicobarLogo = ({ size = 22, color = N.black }) => (
+  <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: size, fontWeight: 400, letterSpacing: "0.22em", color, textTransform: "uppercase", userSelect: "none" }}>
+    Nicobar
+  </span>
+);
+
+// ─── ICONS ──────────────────────────────────────────────────────────────────
+const Icon = ({ name, size = 20, color = N.black, onClick, style = {} }) => {
+  const paths = {
+    "arrow-left": <polyline points="15 18 9 12 15 6" />,
+    menu: <><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></>,
+    bag: <><path d="M6 2 L3 6 v14 a2 2 0 0 0 2 2 h14 a2 2 0 0 0 2-2 V6 l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></>,
+    heart: <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />,
+    search: <><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>,
+    share: <><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></>,
+    camera: <><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></>,
+    "map-pin": <><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></>,
+    check: <polyline points="20 6 9 17 4 12" />,
+    star: <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />,
+    trash: <><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></>,
+    gift: <><polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><line x1="12" y1="22" x2="12" y2="7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></>,
+    sparkle: <path d="M12 3 L13.5 9 L20 9 L14.5 13 L16.5 20 L12 16 L7.5 20 L9.5 13 L4 9 L10.5 9 Z" />,
+    home: <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></>,
+    user: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
+    minus: <line x1="5" y1="12" x2="19" y2="12" />,
+    plus: <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>,
+    "chevron-right": <polyline points="9 18 15 12 9 6" />,
+    "chevron-down": <polyline points="6 9 12 15 18 9" />,
+    upload: <><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></>,
+  };
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" onClick={onClick} style={{ cursor: onClick ? "pointer" : "default", flexShrink: 0, ...style }}>
+      {paths[name]}
+    </svg>
+  );
+};
+
+// ─── SHARED UI ──────────────────────────────────────────────────────────────
+const BtnPrimary = ({ children, onClick, style = {} }) => (
+  <button onClick={onClick} style={{ padding: "15px 32px", background: N.black, color: N.white, border: "none", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 500, fontFamily: "'Jost', sans-serif", ...style }}>
+    {children}
+  </button>
+);
+
+const BtnOutline = ({ children, onClick, style = {} }) => (
+  <button onClick={onClick} style={{ padding: "14px 32px", background: N.white, color: N.black, border: `1px solid ${N.black}`, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 500, fontFamily: "'Jost', sans-serif", ...style }}>
+    {children}
+  </button>
+);
+
+const Input = ({ label, ...props }) => (
+  <div style={{ marginBottom: 16 }}>
+    {label && <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: N.grey2, marginBottom: 7 }}>{label}</div>}
+    <input {...props} style={{ width: "100%", padding: "14px 16px", border: `1px solid ${N.grey4}`, fontSize: 13, color: N.black, outline: "none", background: N.white, fontFamily: "'Jost', sans-serif", letterSpacing: "0.02em" }} />
+  </div>
+);
+
+const SectionLabel = ({ children, style = {} }) => (
+  <div style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: N.grey2, marginBottom: 14, ...style }}>{children}</div>
+);
+
+const Divider = () => <div style={{ height: 1, background: N.grey4, margin: "0" }} />;
+
+const OtpBoxes = ({ values = ["8", "4", "2", ""] }) => (
+  <div style={{ display: "flex", gap: 12, margin: "26px 0" }}>
+    {values.map((v, i) => (
+      <div key={i} style={{ width: 56, height: 60, border: `1px solid ${v ? N.black : N.grey4}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: N.black, background: v ? N.white : N.grey5 }}>
+        {v}
+      </div>
+    ))}
+  </div>
+);
+
+const ChipFilter = ({ options, active, onChange }) => (
+  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 28 }}>
+    {options.map((o) => (
+      <button key={o} onClick={() => onChange(o)} style={{ padding: "9px 18px", border: `1px solid ${active === o ? N.black : N.grey4}`, background: active === o ? N.black : N.white, color: active === o ? N.white : N.grey1, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" }}>
+        {o}
+      </button>
+    ))}
+  </div>
+);
+
+const StepProgress = ({ current }) => (
+  <div style={{ display: "flex", alignItems: "center", margin: "0 0 32px", maxWidth: 480 }}>
+    {["Cart", "Address & Payment", "Confirmed"].map((s, i) => (
+      <div key={i} style={{ display: "flex", alignItems: "center", flex: i < 2 ? 1 : 0 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 28, height: 28, borderRadius: "50%", background: i <= current ? N.black : N.white, border: i > current ? `1px solid ${N.grey4}` : "none", display: "flex", alignItems: "center", justifyContent: "center", color: i <= current ? N.white : N.grey3, fontSize: 11, fontWeight: 500 }}>
+            {i < current ? <Icon name="check" size={13} color={N.white} /> : <span>{i + 1}</span>}
+          </div>
+          <span style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: i <= current ? N.black : N.grey3, whiteSpace: "nowrap" }}>{s}</span>
+        </div>
+        {i < 2 && <div style={{ flex: 1, height: 1, background: i < current ? N.black : N.grey4, margin: "0 10px", marginBottom: 20 }} />}
+      </div>
+    ))}
+  </div>
+);
+
+const MakerCard = ({ name, role, location, quote, go }) => (
+  <div onClick={() => go("maker")} style={{ border: `1px solid ${N.grey4}`, padding: 24, cursor: "pointer" }}>
+    <SectionLabel>From the maker</SectionLabel>
+    <div style={{ display: "flex", gap: 14, marginBottom: 16 }}>
+      <Placeholder w={52} h={52} style={{ borderRadius: "50%", flexShrink: 0 }} />
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: N.black, letterSpacing: "0.04em" }}>{name}</div>
+        <div style={{ fontSize: 11, color: N.grey2, marginTop: 2, letterSpacing: "0.03em" }}>{role}</div>
+        <div style={{ fontSize: 11, color: N.grey2, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
+          <Icon name="map-pin" size={11} color={N.grey2} /> {location}
+        </div>
+      </div>
+      <span style={{ marginLeft: "auto", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: N.grey2, whiteSpace: "nowrap", alignSelf: "flex-start" }}>Read story</span>
+    </div>
+    <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontStyle: "italic", color: N.grey1, lineHeight: 1.75, paddingLeft: 14, borderLeft: `2px solid ${N.grey3}` }}>
+      "{quote}"
+    </p>
+  </div>
+);
+
+// ─── LAYOUT: TOP NAV + FOOTER ───────────────────────────────────────────────
+const NAV_LINKS = [
+  { id: "shop", label: "Shop" },
+  { id: "swipe", label: "For You" },
+  { id: "room", label: "My Room" },
+  { id: "wishlist", label: "Wishlist" },
+  { id: "orders", label: "Orders" },
+];
+
+const Container = ({ children, style = {} }) => (
+  <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 32px", ...style }}>{children}</div>
+);
+
+const Banner = ({ text }) => (
+  <div style={{ background: N.black, color: N.white, textAlign: "center", padding: "9px 16px", fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase" }}>
+    {text}
+  </div>
+);
+
+const TopNavBar = ({ go, page, cartCount = 3 }) => {
+  const [q, setQ] = useState("");
+  return (
+    <div style={{ position: "sticky", top: 0, zIndex: 50, background: N.white }}>
+      <Banner text="Free shipping on orders above ₹1,000 · Monsoon 25 is here" />
+      <div style={{ borderBottom: `1px solid ${N.grey4}` }}>
+        <Container style={{ display: "flex", alignItems: "center", height: 76, gap: 32 }}>
+          <div onClick={() => go("home")} style={{ cursor: "pointer" }}>
+            <NicobarLogo />
+          </div>
+          <nav className="nic-hide-mobile" style={{ display: "flex", gap: 28, flex: 1 }}>
+            {NAV_LINKS.map((l) => (
+              <span
+                key={l.id}
+                onClick={() => go(l.id)}
+                style={{
+                  fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", cursor: "pointer",
+                  color: page === l.id ? N.black : N.grey1,
+                  borderBottom: page === l.id ? `1.5px solid ${N.black}` : "1.5px solid transparent",
+                  paddingBottom: 4,
+                }}
+              >
+                {l.label}
+              </span>
+            ))}
+          </nav>
+          <div style={{ flex: 1 }} className="nic-hide-mobile-spacer" />
+          <div style={{ display: "flex", alignItems: "center", gap: 18, marginLeft: "auto" }}>
+            <div className="nic-hide-mobile" style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${N.grey4}`, padding: "7px 12px", width: 190 }}>
+              <Icon name="search" size={15} color={N.grey2} />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search products"
+                style={{ border: "none", outline: "none", fontSize: 11, width: "100%", fontFamily: "'Jost', sans-serif", background: "transparent" }}
+              />
+            </div>
+            <Icon name="heart" size={19} onClick={() => go("wishlist")} />
+            <Icon name="user" size={19} onClick={() => go("account")} />
+            <div style={{ position: "relative", cursor: "pointer" }} onClick={() => go("cart")}>
+              <Icon name="bag" size={19} />
+              {cartCount > 0 && (
+                <span style={{ position: "absolute", top: -7, right: -8, background: N.black, color: N.white, fontSize: 9, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {cartCount}
+                </span>
+              )}
+            </div>
+          </div>
+        </Container>
+      </div>
+    </div>
+  );
+};
+
+const Footer = ({ go }) => (
+  <footer style={{ background: N.black, color: N.grey4, marginTop: 80 }}>
+    <Container style={{ padding: "56px 32px 32px", display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1.2fr", gap: 32 }}>
+      <div>
+        <NicobarLogo color={N.white} />
+        <p style={{ fontSize: 12, color: N.grey3, lineHeight: 1.8, marginTop: 16, maxWidth: 280 }}>
+          Dining and decor curated for the way you actually live — handcrafted by makers across India.
+        </p>
+      </div>
+      <div>
+        <SectionLabel style={{ color: N.grey3 }}>Shop</SectionLabel>
+        {["Dining", "Living room", "New in", "Under ₹5k"].map((l) => (
+          <div key={l} onClick={() => go("shop")} style={{ fontSize: 12, color: N.grey4, marginBottom: 10, cursor: "pointer" }}>{l}</div>
+        ))}
+      </div>
+      <div>
+        <SectionLabel style={{ color: N.grey3 }}>Account</SectionLabel>
+        {[["Orders", "orders"], ["Wishlist", "wishlist"], ["My Room", "room"], ["Sign in", "login"]].map(([l, id]) => (
+          <div key={l} onClick={() => go(id)} style={{ fontSize: 12, color: N.grey4, marginBottom: 10, cursor: "pointer" }}>{l}</div>
+        ))}
+      </div>
+      <div>
+        <SectionLabel style={{ color: N.grey3 }}>Stay in touch</SectionLabel>
+        <p style={{ fontSize: 12, color: N.grey3, lineHeight: 1.7, marginBottom: 14 }}>Sign up for style notes and early access to new drops.</p>
+        <div style={{ display: "flex", border: `1px solid ${N.grey1}` }}>
+          <input placeholder="Email address" style={{ flex: 1, background: "transparent", border: "none", padding: "11px 12px", color: N.white, fontSize: 12, outline: "none" }} />
+          <button style={{ background: N.white, color: N.black, border: "none", padding: "0 16px", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase" }}>Join</button>
+        </div>
+      </div>
+    </Container>
+    <div style={{ borderTop: `1px solid #333`, padding: "18px 32px", textAlign: "center", fontSize: 10, color: N.grey2, letterSpacing: "0.08em" }}>
+      Nicobar Design Pvt. Ltd. © 2025 — Image placeholders shown, replace with Nicobar photography
+    </div>
+  </footer>
+);
+
+const PageShell = ({ go, page, children, hideNav = false }) => (
+  <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <style>{globalStyle}</style>
+    {!hideNav && <TopNavBar go={go} page={page} />}
+    <div style={{ flex: 1 }}>{children}</div>
+    {!hideNav && <Footer go={go} />}
+  </div>
+);
+
+// ════════════════════════════════════════════════════════════════════════════
+// PAGES
+// ════════════════════════════════════════════════════════════════════════════
+
+const HomePage = ({ go }) => (
+  <PageShell go={go} page="home">
+    <div style={{ position: "relative", height: "78vh", minHeight: 480 }}>
+      <Placeholder w="100%" h="100%" label="Hero — Nicobar home collection campaign image" style={{ position: "absolute", inset: 0 }} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)" }} />
+      <Container style={{ position: "absolute", bottom: 64, left: 0, right: 0 }}>
+        <div style={{ fontSize: 11, letterSpacing: "0.24em", textTransform: "uppercase", color: "rgba(255,255,255,0.75)", marginBottom: 10 }}>Nicobar Home</div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 56, fontWeight: 300, color: N.white, lineHeight: 1.15, marginBottom: 16, maxWidth: 640 }}>
+          A home that tells your story.
+        </div>
+        <div style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", lineHeight: 1.7, marginBottom: 32, maxWidth: 460, letterSpacing: "0.02em" }}>
+          Discover dining and decor curated for the way you actually live.
+        </div>
+        <div style={{ display: "flex", gap: 14 }}>
+          <BtnPrimary onClick={() => go("shop")} style={{ background: N.white, color: N.black }}>Shop the collection</BtnPrimary>
+          <BtnOutline onClick={() => go("login")} style={{ borderColor: "rgba(255,255,255,0.6)", color: N.white, background: "transparent" }}>Sign in</BtnOutline>
+        </div>
+      </Container>
+    </div>
+
+    <Container style={{ padding: "72px 32px" }}>
+      <SectionLabel>Shop by room</SectionLabel>
+      <div className="nic-grid">
+        {["Dining", "Living room", "Bedroom", "Gifting"].map((r) => (
+          <div key={r} onClick={() => go("shop")} style={{ cursor: "pointer" }}>
+            <Placeholder aspect="3/4" label={r} />
+            <div style={{ marginTop: 12, fontFamily: "'Cormorant Garamond', serif", fontSize: 20 }}>{r}</div>
+          </div>
+        ))}
+      </div>
+    </Container>
+
+    <div style={{ background: N.creamDark, padding: "72px 0" }}>
+      <Container style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center" }}>
+        <Placeholder aspect="4/3" label="Ramesh Kumar at work — pottery wheel, Khurja UP" />
+        <div>
+          <SectionLabel>The makers</SectionLabel>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, marginBottom: 16 }}>Every piece has a name behind it.</div>
+          <p style={{ fontSize: 13, color: N.grey1, lineHeight: 1.85, marginBottom: 24, maxWidth: 440 }}>
+            We work with over 40 craft clusters across India — potters, weavers, and metalworkers carrying forward traditions passed down for generations.
+          </p>
+          <BtnOutline onClick={() => go("maker")}>Meet the makers</BtnOutline>
+        </div>
+      </Container>
+    </div>
+
+    <Container style={{ padding: "72px 32px 96px", textAlign: "center" }}>
+      <SectionLabel style={{ justifyContent: "center", display: "flex" }}>Style your space</SectionLabel>
+      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, marginBottom: 16 }}>See it in your room before you buy it.</div>
+      <p style={{ fontSize: 13, color: N.grey1, lineHeight: 1.85, marginBottom: 28, maxWidth: 480, margin: "0 auto 28px" }}>
+        Upload a photo of your space and place any piece in it — get an instant styling match score.
+      </p>
+      <BtnPrimary onClick={() => go("room")}>Try My Room</BtnPrimary>
+    </Container>
+  </PageShell>
+);
+
+// ─── AUTH PAGES ─────────────────────────────────────────────────────────────
+const AuthLayout = ({ go, children }) => (
+  <div style={{ minHeight: "100vh", display: "flex" }}>
+    <style>{globalStyle}</style>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 12%", maxWidth: 560 }}>
+      <div onClick={() => go("home")} style={{ cursor: "pointer", marginBottom: 48 }}>
+        <NicobarLogo size={24} />
+      </div>
+      {children}
+    </div>
+    <div className="nic-hide-mobile" style={{ flex: 1, position: "relative" }}>
+      <Placeholder w="100%" h="100%" label="Nicobar home collection campaign image" style={{ position: "absolute", inset: 0 }} />
+    </div>
+  </div>
+);
+
+const LoginPage = ({ go }) => (
+  <AuthLayout go={go}>
+    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 34, fontWeight: 300, marginBottom: 10 }}>Welcome back.</div>
+    <div style={{ fontSize: 13, color: N.grey1, lineHeight: 1.75, marginBottom: 30, letterSpacing: "0.02em" }}>
+      Sign in with the email or mobile linked to your Nicobar account.
+    </div>
+    <Input label="Email address" type="email" placeholder="you@example.com" />
+    <div style={{ textAlign: "right", marginTop: -10, marginBottom: 20 }}>
+      <span style={{ fontSize: 11, letterSpacing: "0.08em", color: N.grey2, cursor: "pointer", textDecoration: "underline", textTransform: "uppercase" }} onClick={() => go("forgot")}>
+        Forgot email?
+      </span>
+    </div>
+    <BtnPrimary onClick={() => go("otp")} style={{ width: "100%", marginBottom: 14 }}>Send OTP</BtnPrimary>
+    <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "22px 0" }}>
+      <div style={{ flex: 1, height: 1, background: N.grey4 }} /><span style={{ fontSize: 10, color: N.grey2, textTransform: "uppercase", letterSpacing: "0.12em" }}>Or</span><div style={{ flex: 1, height: 1, background: N.grey4 }} />
+    </div>
+    <BtnOutline style={{ width: "100%" }}>Continue with Google</BtnOutline>
+    <p style={{ fontSize: 12, color: N.grey2, marginTop: 24 }}>
+      New to Nicobar? <span style={{ color: N.black, textDecoration: "underline", cursor: "pointer" }} onClick={() => go("home")}>Create an account</span>
+    </p>
+  </AuthLayout>
+);
+
+const ForgotPage = ({ go }) => (
+  <AuthLayout go={go}>
+    <Icon name="arrow-left" size={20} onClick={() => go("login")} style={{ marginBottom: 24 }} />
+    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 300, marginBottom: 10 }}>Find your account.</div>
+    <p style={{ fontSize: 13, color: N.grey1, lineHeight: 1.75, marginBottom: 28 }}>Enter your mobile number and we'll find the email linked to it.</p>
+    <Input label="Mobile number" type="tel" placeholder="+91 98765 43210" />
+    <BtnPrimary onClick={() => go("found")} style={{ width: "100%" }}>Find my account</BtnPrimary>
+  </AuthLayout>
+);
+
+const FoundPage = ({ go }) => (
+  <AuthLayout go={go}>
+    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 300, marginBottom: 10 }}>We found your account.</div>
+    <p style={{ fontSize: 13, color: N.grey1, lineHeight: 1.75, marginBottom: 24 }}>Continue signing in with:</p>
+    <div style={{ border: `1px solid ${N.grey4}`, padding: "16px 18px", marginBottom: 24, fontSize: 13 }}>p*****a@gmail.com</div>
+    <BtnPrimary onClick={() => go("otp")} style={{ width: "100%" }}>Send OTP</BtnPrimary>
+  </AuthLayout>
+);
+
+const OtpPage = ({ go }) => (
+  <AuthLayout go={go}>
+    <Icon name="arrow-left" size={20} onClick={() => go("login")} style={{ marginBottom: 24 }} />
+    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 300, marginBottom: 10 }}>Enter the code.</div>
+    <p style={{ fontSize: 13, color: N.grey1, lineHeight: 1.75 }}>We sent a 4-digit code to p*****a@gmail.com</p>
+    <OtpBoxes />
+    <BtnPrimary onClick={() => go("shop")} style={{ width: "100%", marginBottom: 14 }}>Verify & continue</BtnPrimary>
+    <p style={{ fontSize: 11, color: N.grey2, letterSpacing: "0.04em" }}>Didn't get a code? <span style={{ textDecoration: "underline", color: N.black, cursor: "pointer" }}>Resend</span></p>
+  </AuthLayout>
+);
+
+// ─── PRODUCT DATASET (shared by looks carousel + swipe deck) ─────────────────
+const PRODUCTS = [
+  { name: "Valley Vase", price: 4600, tags: ["Terracotta", "Dining", "Aluminium"] },
+  { name: "Indigo Dinner Plates", price: 3290, tags: ["Block print", "Dining"] },
+  { name: "Brass Taper Candles", price: 2190, tags: ["Brass", "Ambient"] },
+  { name: "Rattan Wall Mirror", price: 4490, tags: ["Rattan", "Living room"] },
+  { name: "Nadi Vase", price: 3190, tags: ["Terracotta", "Dining"] },
+  { name: "Palm Mug", price: 1890, tags: ["Hand-glazed", "Dining"] },
+  { name: "Diya Set", price: 1490, tags: ["Brass", "Ambient"] },
+  { name: "Clay Tea Pot", price: 2890, tags: ["Terracotta", "Dining"] },
+  { name: "Chai Cups ×4", price: 2290, tags: ["Terracotta", "Dining"] },
+  { name: "Spice Jar Set", price: 1490, tags: ["Rattan", "Living room"] },
+];
+
+const STYLED_LOOKS = [
+  { title: "The Monsoon Table", meta: "Monsoon 25 · Dining · 4 pieces", tags: ["Terracotta", "Hand-thrown", "Dining"], price: "₹8,490 for the set" },
+  { title: "Still Evening", meta: "Perennial · Living room · 3 pieces", tags: ["Brass", "Hand-glazed", "Ambient"], price: "₹6,290 for the set" },
+  { title: "Morning Ritual", meta: "Everyday · Dining · 5 pieces", tags: ["Clay", "Warm", "Breakfast"], price: "₹5,190 for the set" },
+  { title: "Quiet Corner", meta: "Reading nook · Living room · 3 pieces", tags: ["Rattan", "Textured", "Cozy"], price: "₹7,340 for the set" },
+];
+
+// ─── STYLED LOOKS CAROUSEL (editorial, full-bleed, before the plain grid) ────
+const StyledLooksCarousel = ({ go }) => (
+  <Container style={{ padding: "40px 32px 16px" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
+      <div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, marginBottom: 4 }}>Styled looks</div>
+        <div style={{ fontSize: 13, color: N.grey2 }}>Full rooms, styled by us — shop the whole scene</div>
+      </div>
+    </div>
+    <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 8, scrollSnapType: "x mandatory" }}>
+      {STYLED_LOOKS.map((look) => (
+        <div
+          key={look.title}
+          onClick={() => go("product")}
+          style={{ position: "relative", flexShrink: 0, width: 340, height: 440, cursor: "pointer", scrollSnapAlign: "start", overflow: "hidden" }}
+        >
+          <Placeholder w="100%" h="100%" label={look.title + " — styled scene"} style={{ position: "absolute", inset: 0 }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)" }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 22 }}>
+            <div style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 6 }}>{look.meta}</div>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: N.white, marginBottom: 10 }}>{look.title}</div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 14 }}>
+              {look.tags.map((t) => (
+                <span key={t} style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", border: "0.5px solid rgba(255,255,255,0.5)", padding: "4px 9px", color: "rgba(255,255,255,0.9)" }}>{t}</span>
+              ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: N.white }}>{look.price}</span>
+              <span style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: N.black, background: N.white, padding: "9px 16px" }}>Shop the look</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </Container>
+);
+
+// ─── SWIPE DECK (Tinder-style like / skip for taste-based recommendations) ──
+const SwipeDeck = ({ go, cardW = 340, cardH = 440 }) => {
+  const [index, setIndex] = useState(0);
+  const [drag, setDrag] = useState({ dragging: false, startX: 0, dx: 0 });
+  const [liked, setLiked] = useState([]);
+  const [passed, setPassed] = useState([]);
+
+  const deck = PRODUCTS;
+  const done = index >= deck.length;
+
+  const commit = (direction) => {
+    const item = deck[index];
+    if (direction === "like") setLiked((l) => [...l, item]);
+    else setPassed((p) => [...p, item]);
+    setDrag({ dragging: false, startX: 0, dx: 0 });
+    setIndex((i) => i + 1);
+  };
+
+  const onDown = (e) => {
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    setDrag({ dragging: true, startX: x, dx: 0 });
+  };
+  const onMove = (e) => {
+    if (!drag.dragging) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    setDrag((d) => ({ ...d, dx: x - d.startX }));
+  };
+  const onUp = () => {
+    if (!drag.dragging) return;
+    if (drag.dx > 110) commit("like");
+    else if (drag.dx < -110) commit("dislike");
+    else setDrag({ dragging: false, startX: 0, dx: 0 });
+  };
+
+  const recommendations = () => {
+    if (liked.length === 0) return deck.slice(0, 4);
+    const likedTags = new Set(liked.flatMap((p) => p.tags));
+    return deck
+      .filter((p) => !liked.includes(p) && p.tags.some((t) => likedTags.has(t)))
+      .slice(0, 4);
+  };
+
+  if (done) {
+    const recs = recommendations();
+    return (
+      <div style={{ textAlign: "center", padding: "24px 0" }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, marginBottom: 8 }}>You liked {liked.length} of {deck.length}</div>
+        <p style={{ fontSize: 13, color: N.grey1, lineHeight: 1.7, marginBottom: 28 }}>Here's what we'd recommend based on your taste</p>
+        <div className="nic-grid" style={{ maxWidth: 900, margin: "0 auto", textAlign: "left" }}>
+          {recs.map((p) => (
+            <div key={p.name} onClick={() => go("product")} style={{ cursor: "pointer" }}>
+              <Placeholder aspect="3/4" label={p.name} />
+              <div style={{ fontSize: 13, marginTop: 10 }}>{p.name}</div>
+              <div style={{ fontSize: 12, color: N.grey2, marginTop: 3 }}>₹{p.price.toLocaleString("en-IN")}</div>
+            </div>
+          ))}
+        </div>
+        <BtnOutline style={{ marginTop: 28 }} onClick={() => { setIndex(0); setLiked([]); setPassed([]); }}>Swipe again</BtnOutline>
+      </div>
+    );
+  }
+
+  const rotate = drag.dx / 20;
+  const likeOpacity = Math.min(Math.max(drag.dx / 110, 0), 1);
+  const passOpacity = Math.min(Math.max(-drag.dx / 110, 0), 1);
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26 }}>Swipe for your style</div>
+        <div style={{ fontSize: 12, color: N.grey2, marginTop: 4 }}>{index + 1} of {deck.length} · Drag right to like, left to skip</div>
+      </div>
+      <div style={{ position: "relative", width: cardW, height: cardH, margin: "0 auto" }}>
+        {deck.slice(index, index + 3).reverse().map((p, revI) => {
+          const stackI = deck.slice(index, index + 3).length - 1 - revI;
+          const isTop = stackI === 0;
+          return (
+            <div
+              key={p.name}
+              onMouseDown={isTop ? onDown : undefined}
+              onMouseMove={isTop ? onMove : undefined}
+              onMouseUp={isTop ? onUp : undefined}
+              onMouseLeave={isTop ? onUp : undefined}
+              onTouchStart={isTop ? onDown : undefined}
+              onTouchMove={isTop ? onMove : undefined}
+              onTouchEnd={isTop ? onUp : undefined}
+              style={{
+                position: "absolute", inset: 0,
+                transform: isTop
+                  ? `translateX(${drag.dx}px) rotate(${rotate}deg)`
+                  : `scale(${1 - stackI * 0.04}) translateY(${stackI * 12}px)`,
+                transition: drag.dragging ? "none" : "transform 0.25s ease",
+                cursor: isTop ? "grab" : "default",
+                zIndex: 10 - stackI,
+                touchAction: "none",
+              }}
+            >
+              <div style={{ position: "relative", width: "100%", height: "100%", background: N.white, border: `1px solid ${N.grey4}`, overflow: "hidden", textAlign: "left" }}>
+                <Placeholder w="100%" h="70%" label={p.name} />
+                <div style={{ padding: 20 }}>
+                  <div style={{ fontSize: 16 }}>{p.name}</div>
+                  <div style={{ fontSize: 13, color: N.grey2, marginTop: 5 }}>₹{p.price.toLocaleString("en-IN")}</div>
+                  <div style={{ display: "flex", gap: 5, marginTop: 10, flexWrap: "wrap" }}>
+                    {p.tags.map((t) => (
+                      <span key={t} style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", border: `0.5px solid ${N.grey3}`, padding: "3px 8px", color: N.grey2 }}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+                {isTop && (
+                  <>
+                    <div style={{ position: "absolute", top: 20, left: 20, border: "3px solid #2e7d32", color: "#2e7d32", fontSize: 18, fontWeight: 700, padding: "4px 12px", transform: "rotate(-14deg)", letterSpacing: "0.08em", opacity: likeOpacity }}>LIKE</div>
+                    <div style={{ position: "absolute", top: 20, right: 20, border: "3px solid #c0392b", color: "#c0392b", fontSize: 18, fontWeight: 700, padding: "4px 12px", transform: "rotate(14deg)", letterSpacing: "0.08em", opacity: passOpacity }}>SKIP</div>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 24, justifyContent: "center", marginTop: 28 }}>
+        <button onClick={() => commit("dislike")} style={{ width: 56, height: 56, borderRadius: "50%", border: `1px solid ${N.grey3}`, background: N.white, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c0392b" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </button>
+        <button onClick={() => commit("like")} style={{ width: 56, height: 56, borderRadius: "50%", border: "none", background: N.black, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Icon name="heart" size={22} color={N.white} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const SwipePage = ({ go }) => (
+  <PageShell go={go} page="swipe">
+    <Container style={{ padding: "40px 32px 88px" }}>
+      <SwipeDeck go={go} />
+    </Container>
+  </PageShell>
+);
+
+// ─── SHOP (DISCOVER) PAGE ───────────────────────────────────────────────────
+const ShopPage = ({ go }) => {
+  const [filter, setFilter] = useState("All looks");
+  return (
+    <PageShell go={go} page="shop">
+      <Container style={{ padding: "40px 32px 12px" }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, marginBottom: 6 }}>Shop the collection</div>
+        <div style={{ background: N.grey5, padding: "12px 16px", marginBottom: 24, display: "inline-flex", gap: 10, alignItems: "center" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={N.grey2} strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+          <span style={{ fontSize: 12, color: N.grey1 }}>Curated for your <strong style={{ color: N.black, fontWeight: 500 }}>warm & earthy</strong> home</span>
+        </div>
+        <ChipFilter options={["All looks", "Dining", "Living room", "Under ₹5k", "New in"]} active={filter} onChange={setFilter} />
+      </Container>
+
+      {/* Styled looks — editorial, full rooms, before any plain product grid */}
+      <StyledLooksCarousel go={go} />
+
+      {/* Swipe CTA banner */}
+      <Container style={{ padding: "8px 32px 8px" }}>
+        <div onClick={() => go("swipe")} style={{ background: N.black, color: N.white, padding: "24px 32px", display: "flex", alignItems: "center", gap: 24, cursor: "pointer" }}>
+          <Icon name="heart" size={28} color={N.white} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontFamily: "'Cormorant Garamond', serif", marginBottom: 4 }}>Swipe to find your style</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>Like or skip pieces one at a time — we'll recommend from there</div>
+          </div>
+          <BtnOutline style={{ borderColor: "rgba(255,255,255,0.6)", color: N.white, whiteSpace: "nowrap" }}>Start swiping</BtnOutline>
+        </div>
+      </Container>
+
+      <Container style={{ padding: "40px 32px 8px" }}>
+        <SectionLabel>Shop individually</SectionLabel>
+        <div className="nic-grid">
+          {["Valley Vase", "Nadi Vase", "Palm Mug", "Diya Set", "Taper Candles", "Indigo Plates", "Rattan Mirror", "Clay Tea Pot"].map((n) => (
+            <div key={n} onClick={() => go("product")} style={{ cursor: "pointer" }}>
+              <Placeholder aspect="3/4" label={n} />
+              <div style={{ marginTop: 10, fontSize: 13 }}>{n}</div>
+              <div style={{ fontSize: 12, color: N.grey2, marginTop: 3 }}>₹{(1890 + n.length * 130).toLocaleString("en-IN")}</div>
+            </div>
+          ))}
+        </div>
+      </Container>
+
+      <div style={{ background: N.grey5, marginTop: 56, padding: "48px 0" }}>
+        <Container>
+          <SectionLabel>The makers</SectionLabel>
+          <div className="nic-grid">
+            {[
+              { name: "Ramesh Kumar", role: "Master potter, Khurja" },
+              { name: "Fatima Sheikh", role: "Block-print artisan, Bagru" },
+              { name: "Suresh Rathod", role: "Brass caster, Moradabad" },
+              { name: "Lakshmi Devi", role: "Weaver, Sualkuchi" },
+            ].map((m) => (
+              <div key={m.name} onClick={() => go("maker")} style={{ cursor: "pointer", textAlign: "center" }}>
+                <Placeholder aspect="1/1" style={{ borderRadius: "50%", marginBottom: 12 }} />
+                <div style={{ fontSize: 13, fontWeight: 500 }}>{m.name}</div>
+                <div style={{ fontSize: 11, color: N.grey2, marginTop: 2 }}>{m.role}</div>
+              </div>
+            ))}
+          </div>
+        </Container>
+      </div>
+    </PageShell>
+  );
+};
+
+// ─── PRODUCT PAGE ───────────────────────────────────────────────────────────
+const ProductPage = ({ go }) => (
+  <PageShell go={go} page="shop">
+    <Container style={{ padding: "40px 32px 0" }}>
+      <div style={{ fontSize: 11, color: N.grey2, marginBottom: 24, display: "flex", gap: 8, alignItems: "center" }}>
+        <span style={{ cursor: "pointer" }} onClick={() => go("shop")}>Shop</span> <Icon name="chevron-right" size={11} color={N.grey3} /> <span style={{ cursor: "pointer" }} onClick={() => go("shop")}>Vases & Planters</span> <Icon name="chevron-right" size={11} color={N.grey3} /> <span style={{ color: N.black }}>Valley Vase</span>
+      </div>
+    </Container>
+    <Container style={{ padding: "0 32px 56px", display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 56 }} className="nic-product-cols">
+      <div>
+        <Placeholder aspect="4/5" label="Valley Vase — main product photo" style={{ marginBottom: 8 }} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+          {[1, 2, 3, 4].map((i) => <Placeholder key={i} aspect="1/1" label={`View ${i}`} />)}
+        </div>
+      </div>
+      <div>
+        <div style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: N.grey2, marginBottom: 8 }}>Vases & Planters</div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 34, marginBottom: 6 }}>Valley Vase</div>
+        <div style={{ fontSize: 17, marginBottom: 20 }}>₹4,600</div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 22 }}>
+          {["Aluminium", "Hand-finished", "Decor", "Gifting"].map((t) => (
+            <span key={t} style={{ fontSize: 10, border: `0.5px solid ${N.grey3}`, padding: "4px 10px", color: N.grey1, letterSpacing: "0.08em", textTransform: "uppercase" }}>{t}</span>
+          ))}
+        </div>
+        <p style={{ fontSize: 13, color: N.grey1, lineHeight: 1.85, marginBottom: 26, maxWidth: 440 }}>
+          Terracotta in spirit, metal in form. The Valley Vase brings earthy charm without the fragility. Crafted in aluminium with a rich brown finish, it brings depth, texture, and a grounded silhouette to any surface. Perfect as a standalone accent or to hold a few faux stems.
+        </p>
+        <div style={{ display: "flex", gap: 10, marginBottom: 24, maxWidth: 440 }}>
+          <BtnPrimary onClick={() => go("cart")} style={{ flex: 1 }}>Add to bag</BtnPrimary>
+          <button onClick={() => go("wishlist")} style={{ width: 56, border: `1px solid ${N.black}`, background: N.white, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon name="heart" size={19} color={N.black} />
+          </button>
+        </div>
+        <div style={{ borderTop: `1px solid ${N.grey4}`, paddingTop: 20, marginBottom: 24, maxWidth: 440 }}>
+          <button onClick={() => go("room")} style={{ width: "100%", padding: "14px", border: `1px solid ${N.grey4}`, background: N.white, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <Icon name="camera" size={16} color={N.grey1} /> See in your space
+          </button>
+        </div>
+        <div style={{ maxWidth: 440, marginBottom: 24 }}>
+          <MakerCard name="Ramesh Kumar" role="Master Potter · 3rd generation" location="Khurja, Uttar Pradesh" quote="No two pieces come out exactly the same. That's what makes them alive." go={go} />
+        </div>
+        <div style={{ borderTop: `1px solid ${N.grey4}`, paddingTop: 20, maxWidth: 440 }}>
+          <SectionLabel>Care & craft</SectionLabel>
+          <p style={{ fontSize: 13, color: N.grey1, lineHeight: 1.8 }}>
+            Crafted in aluminium with a hand-applied rich brown finish. Wipe clean with a soft, damp cloth. Do not use abrasive substances.
+          </p>
+        </div>
+      </div>
+    </Container>
+    <Container style={{ padding: "0 32px 64px" }}>
+      <SectionLabel>You might also like</SectionLabel>
+      <div className="nic-grid">
+        {["Nadi Vase", "Palm Mug", "Diya Set", "Taper Candles"].map((n) => (
+          <div key={n} onClick={() => go("product")} style={{ cursor: "pointer" }}>
+            <Placeholder aspect="3/4" label={n} />
+            <div style={{ marginTop: 10, fontSize: 13 }}>{n}</div>
+            <div style={{ fontSize: 12, color: N.grey2, marginTop: 3 }}>₹1,890</div>
+          </div>
+        ))}
+      </div>
+    </Container>
+  </PageShell>
+);
+
+// ─── MAKER STORY PAGE ───────────────────────────────────────────────────────
+const MakerPage = ({ go }) => (
+  <PageShell go={go} page="shop">
+    <div style={{ position: "relative", height: 420 }}>
+      <Placeholder w="100%" h="100%" label="Ramesh Kumar at work — pottery wheel, Khurja UP" style={{ position: "absolute", inset: 0 }} />
+    </div>
+    <Container style={{ padding: "40px 32px 64px", display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 56 }} className="nic-grid-2">
+      <div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, marginBottom: 4 }}>Ramesh Kumar</div>
+        <div style={{ fontSize: 12, color: N.grey2, letterSpacing: "0.04em", marginBottom: 6 }}>Master Potter · Khurja Pottery Tradition</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 24, fontSize: 12, color: N.grey2 }}>
+          <Icon name="map-pin" size={12} color={N.grey2} /> Khurja, Uttar Pradesh · With Nicobar since 2019
+        </div>
+        <div style={{ display: "flex", gap: 1, marginBottom: 24 }}>
+          {[["3rd", "Generation"], ["22", "Years craft"], ["5", "This season"]].map(([n, l]) => (
+            <div key={l} style={{ flex: 1, background: N.grey5, padding: "16px 8px", textAlign: "center", border: `0.5px solid ${N.grey4}` }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26 }}>{n}</div>
+              <div style={{ fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: N.grey2, marginTop: 4 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+        <BtnPrimary onClick={() => go("shop")} style={{ width: "100%" }}>Shop Ramesh's pieces</BtnPrimary>
+      </div>
+      <div>
+        <div style={{ paddingLeft: 18, borderLeft: `2px solid ${N.black}`, marginBottom: 28 }}>
+          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontStyle: "italic", color: N.grey1, lineHeight: 1.75 }}>
+            "My father taught me that clay is alive. You can't force it — you have to work with what it wants to do. Every piece I make carries that lesson."
+          </p>
+          <p style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: N.grey3, marginTop: 10 }}>— Ramesh Kumar</p>
+        </div>
+        <SectionLabel>His story</SectionLabel>
+        <p style={{ fontSize: 13, color: N.grey1, lineHeight: 1.9, marginBottom: 28 }}>
+          Ramesh learned the wheel at age 12, watching his father and grandfather work in their small workshop off the Khurja bazaar. Khurja has been India's pottery capital for over 600 years — supplying everything from temple vessels to hotel crockery. Nicobar found him through a craft fair in Delhi in 2019. The Valley Vase collection is now in its third season and among the brand's best-loved pieces.
+        </p>
+        <SectionLabel>Watch him work</SectionLabel>
+        <div style={{ position: "relative", marginBottom: 28 }}>
+          <Placeholder aspect="16/9" label="Video — Ramesh at the wheel, 2 min" />
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={N.white}><polygon points="5 3 19 12 5 21 5 3" /></svg>
+            </div>
+          </div>
+        </div>
+        <SectionLabel>His pieces this season</SectionLabel>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+          {["Valley Vase — ₹4,600", "Clay Tea Pot — ₹2,890", "Chai Cups ×4 — ₹2,290", "Spice Jar Set — ₹1,490"].map((n) => (
+            <div key={n} onClick={() => go("product")} style={{ cursor: "pointer" }}>
+              <Placeholder aspect="1/1" label={n.split("—")[0].trim()} />
+              <div style={{ fontSize: 12, marginTop: 8 }}>{n.split("—")[0].trim()}</div>
+              <div style={{ fontSize: 11, color: N.grey2, marginTop: 2 }}>{n.split("—")[1]?.trim()}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Container>
+  </PageShell>
+);
+
+// ─── MY ROOM PAGE ───────────────────────────────────────────────────────────
+const RoomPage = ({ go }) => {
+  const [sel, setSel] = useState("Valley Vase");
+  const pieces = ["Valley Vase", "Indigo Plates", "Taper Candles", "Rattan Mirror"];
+  return (
+    <PageShell go={go} page="room">
+      <Container style={{ padding: "40px 32px 64px" }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, marginBottom: 8 }}>My Room</div>
+        <p style={{ fontSize: 13, color: N.grey1, marginBottom: 32, maxWidth: 520 }}>Upload a photo of your space, place any piece in it, and get an instant styling match.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 40 }} className="nic-room-cols">
+          <div>
+            <SectionLabel>Your space</SectionLabel>
+            <div style={{ border: `1px solid ${N.grey4}`, padding: 16, background: N.grey5 }}>
+              <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: N.grey2, marginBottom: 12 }}>Living room — uploaded photo</div>
+              <Placeholder aspect="16/9" label="Your room photo will appear here — tap to place pieces" />
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                {["Retake", "Upload new"].map((l) => (
+                  <button key={l} style={{ padding: "9px 16px", border: `1px solid ${N.grey4}`, background: N.white, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif", color: N.grey1, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Icon name={l === "Retake" ? "camera" : "upload"} size={12} color={N.grey2} /> {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div>
+            <SectionLabel>Place a piece</SectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 20 }}>
+              {pieces.map((p) => (
+                <div key={p} onClick={() => setSel(p)} style={{ border: `1px solid ${sel === p ? N.black : N.grey4}`, cursor: "pointer" }}>
+                  <Placeholder aspect="1/1" label={p} />
+                  <div style={{ padding: "7px 8px", fontSize: 10, letterSpacing: "0.04em", lineHeight: 1.3 }}>{p}</div>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 13, color: N.grey1, lineHeight: 1.7, marginBottom: 16 }}>
+              <strong style={{ fontWeight: 500, color: N.black }}>{sel}</strong> selected — tap your room photo to place it and see how it fits.
+            </p>
+            <div style={{ border: `1px solid ${N.grey4}`, padding: "14px 16px", marginBottom: 20, background: N.grey5 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: N.grey2 }}>Decor harmony</span>
+                <span style={{ fontSize: 14, fontWeight: 500 }}>92%</span>
+              </div>
+              <div style={{ height: 4, background: N.grey4, marginBottom: 12 }}><div style={{ width: "92%", height: "100%", background: N.black }} /></div>
+              <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.7 }}>Warm tones in your living room pair naturally with this piece — a grounded addition to the corner shelf.</p>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <BtnPrimary onClick={() => go("cart")} style={{ flex: 1 }}>Add to bag</BtnPrimary>
+              <BtnOutline onClick={() => go("wishlist")} style={{ flex: 1 }}>Wishlist</BtnOutline>
+            </div>
+          </div>
+        </div>
+      </Container>
+    </PageShell>
+  );
+};
+
+// ─── WISHLIST PAGE ──────────────────────────────────────────────────────────
+const WishlistPage = ({ go }) => (
+  <PageShell go={go} page="wishlist">
+    <Container style={{ padding: "40px 32px 64px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
+        <div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32 }}>Wishlist</div>
+          <div style={{ fontSize: 12, color: N.grey2, marginTop: 4 }}>4 pieces saved</div>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <BtnOutline onClick={() => {}} style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 20px" }}>
+            <Icon name="share" size={14} color={N.black} /> Share wishlist
+          </BtnOutline>
+          <BtnPrimary onClick={() => go("cart")} style={{ padding: "12px 20px" }}>Add all to bag</BtnPrimary>
+        </div>
+      </div>
+      <div className="nic-grid">
+        {[
+          { name: "Valley Vase", sub: "Aluminium · Brown finish", price: "₹4,600" },
+          { name: "Brass Taper Candles", sub: "Set of 4 · Natural wax", price: "₹2,190" },
+          { name: "Indigo Dinner Plates", sub: "Set of 6 · Block print", price: "₹3,290" },
+          { name: "Rattan Wall Mirror", sub: "60cm · Natural weave", price: "₹4,490" },
+        ].map((p) => (
+          <div key={p.name} style={{ background: N.white, border: `1px solid ${N.grey4}` }}>
+            <Placeholder aspect="1/1" label={p.name} />
+            <div style={{ padding: "14px 14px 10px" }}>
+              <div style={{ fontSize: 12 }}>{p.name}</div>
+              <div style={{ fontSize: 11, color: N.grey2, marginTop: 3 }}>{p.sub}</div>
+              <div style={{ fontSize: 12, marginTop: 6 }}>{p.price}</div>
+            </div>
+            <div style={{ display: "flex", borderTop: `1px solid ${N.grey4}` }}>
+              <button onClick={() => go("cart")} style={{ flex: 1, padding: "10px", background: N.black, color: N.white, border: "none", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" }}>Add to bag</button>
+              <button style={{ width: 44, background: N.white, border: "none", borderLeft: `1px solid ${N.grey4}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Icon name="trash" size={14} color={N.grey2} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Container>
+  </PageShell>
+);
+
+// ─── ORDERS (PURCHASES) PAGE ────────────────────────────────────────────────
+const OrdersPage = ({ go }) => (
+  <PageShell go={go} page="orders">
+    <Container style={{ padding: "40px 32px 64px" }}>
+      <div style={{ display: "flex", gap: 16, alignItems: "center", paddingBottom: 24, borderBottom: `1px solid ${N.grey4}`, marginBottom: 28 }}>
+        <Placeholder w={56} h={56} style={{ borderRadius: "50%" }} />
+        <div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22 }}>Priya Mehta</div>
+          <div style={{ fontSize: 11, color: N.grey2, marginTop: 3 }}>Member since 2021</div>
+        </div>
+      </div>
+      <SectionLabel>Order history</SectionLabel>
+      {[
+        { id: "NIC-21034", date: "2 Jul 2026", status: "Delivered", items: "Valley Vase, Indigo Plates, Taper Candles", total: "₹10,279" },
+        { id: "NIC-19871", date: "18 May 2026", status: "Delivered", items: "Rattan Wall Mirror", total: "₹4,490" },
+        { id: "NIC-18220", date: "2 Mar 2026", status: "Delivered", items: "Clay Tea Pot, Chai Cups ×4", total: "₹5,180" },
+      ].map((o) => (
+        <div key={o.id} onClick={() => go("confirmed")} style={{ display: "flex", alignItems: "center", gap: 20, padding: "20px 0", borderBottom: `1px solid ${N.grey4}`, cursor: "pointer" }}>
+          <Placeholder w={64} h={64} label="" />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, marginBottom: 4 }}>Order #{o.id}</div>
+            <div style={{ fontSize: 11, color: N.grey2 }}>{o.items}</div>
+            <div style={{ fontSize: 11, color: N.grey2, marginTop: 4 }}>{o.date}</div>
+          </div>
+          <div style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "#2e7d32", border: "1px solid #2e7d32", padding: "4px 10px" }}>{o.status}</div>
+          <div style={{ fontSize: 13, minWidth: 80, textAlign: "right" }}>{o.total}</div>
+          <Icon name="chevron-right" size={14} color={N.grey3} />
+        </div>
+      ))}
+    </Container>
+  </PageShell>
+);
+
+// ─── CART PAGE ──────────────────────────────────────────────────────────────
+const CartPage = ({ go }) => (
+  <PageShell go={go} page="shop">
+    <Container style={{ padding: "40px 32px 72px", display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 56 }} className="nic-cart-cols">
+      <div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, marginBottom: 24 }}>Your bag — 3 items</div>
+        {[
+          { name: "Valley Vase", sub: "Aluminium · Brown finish", price: "₹4,600" },
+          { name: "Indigo Dinner Plates", sub: "Set of 6 · Block print rim", price: "₹3,290" },
+          { name: "Brass Taper Candles", sub: "Set of 4 · Natural wax", price: "₹2,190" },
+        ].map((item) => (
+          <div key={item.name} style={{ display: "flex", gap: 20, padding: "24px 0", borderBottom: `1px solid ${N.grey4}` }}>
+            <Placeholder w={100} h={120} label={item.name} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14 }}>{item.name}</div>
+              <div style={{ fontSize: 12, color: N.grey2, marginTop: 4 }}>{item.sub}</div>
+              <div style={{ fontSize: 14, marginTop: 10 }}>{item.price}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 14 }}>
+                <div style={{ display: "flex", border: `1px solid ${N.grey4}` }}>
+                  <button style={{ width: 32, height: 32, background: N.white, border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="minus" size={13} color={N.grey1} /></button>
+                  <div style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, borderLeft: `1px solid ${N.grey4}`, borderRight: `1px solid ${N.grey4}` }}>1</div>
+                  <button style={{ width: 32, height: 32, background: N.white, border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="plus" size={13} color={N.grey1} /></button>
+                </div>
+                <span style={{ fontSize: 11, color: N.grey2, letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", textDecoration: "underline" }}>Remove</span>
+              </div>
+            </div>
+          </div>
+        ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "20px 0", cursor: "pointer" }}>
+          <Icon name="gift" size={17} color={N.grey2} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13 }}>Add a gift message</div>
+            <div style={{ fontSize: 11, color: N.grey2, marginTop: 2 }}>Make it special for someone</div>
+          </div>
+          <Icon name="chevron-right" size={14} color={N.grey3} />
+        </div>
+      </div>
+      <div>
+        <div style={{ border: `1px solid ${N.grey4}`, padding: 24, position: "sticky", top: 100 }}>
+          <SectionLabel>Order summary</SectionLabel>
+          {[["Subtotal", "₹10,080"], ["Shipping", "Free"], ["Gift wrapping", "₹199"]].map(([l, v]) => (
+            <div key={l} style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: 13, color: v === "Free" ? "#2e7d32" : N.grey1 }}>
+              <span>{l}</span><span>{v}</span>
+            </div>
+          ))}
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 500, borderTop: `1px solid ${N.grey4}`, paddingTop: 14, marginTop: 8, marginBottom: 20 }}>
+            <span>Total</span><span>₹10,279</span>
+          </div>
+          <BtnPrimary onClick={() => go("checkout")} style={{ width: "100%" }}>Proceed to checkout</BtnPrimary>
+        </div>
+      </div>
+    </Container>
+  </PageShell>
+);
+
+// ─── CHECKOUT PAGE ──────────────────────────────────────────────────────────
+const CheckoutPage = ({ go }) => (
+  <PageShell go={go} page="shop">
+    <Container style={{ padding: "40px 32px 72px", display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 56 }} className="nic-checkout-cols">
+      <div>
+        <StepProgress current={1} />
+        <SectionLabel>Deliver to</SectionLabel>
+        {[
+          { label: "Priya Mehta — Home", addr: "42 Gulmohar Park, New Delhi · 110049", active: true },
+          { label: "Priya Mehta — Office", addr: "Cyber Hub, Gurugram · 122002", active: false },
+        ].map((a) => (
+          <div key={a.label} style={{ border: `1px solid ${a.active ? N.black : N.grey4}`, padding: "16px 18px", marginBottom: 10, cursor: "pointer" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>{a.label}</div>
+                <div style={{ fontSize: 12, color: N.grey2, lineHeight: 1.6 }}>{a.addr}</div>
+              </div>
+              <div style={{ width: 18, height: 18, borderRadius: "50%", border: `1px solid ${a.active ? N.black : N.grey3}`, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2 }}>
+                {a.active && <div style={{ width: 9, height: 9, borderRadius: "50%", background: N.black }} />}
+              </div>
+            </div>
+          </div>
+        ))}
+        <button style={{ background: "none", border: "none", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: N.grey2, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, marginBottom: 28, textDecoration: "underline" }}>
+          <Icon name="plus" size={13} color={N.grey2} /> Add new address
+        </button>
+        <SectionLabel>Payment</SectionLabel>
+        {[
+          { label: "UPI", sub: "priya@okaxis", active: true },
+          { label: "Credit card", sub: "•••• 4821", active: false },
+          { label: "Net banking / COD", sub: "", active: false },
+        ].map((p) => (
+          <div key={p.label} style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", border: `1px solid ${p.active ? N.black : N.grey4}`, marginBottom: 10, cursor: "pointer" }}>
+            <div style={{ width: 18, height: 18, borderRadius: "50%", border: `1px solid ${p.active ? N.black : N.grey3}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {p.active && <div style={{ width: 9, height: 9, borderRadius: "50%", background: N.black }} />}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13 }}>{p.label}</div>
+              {p.sub && <div style={{ fontSize: 11, color: N.grey2, marginTop: 2 }}>{p.sub}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div>
+        <div style={{ border: `1px solid ${N.grey4}`, padding: 24, position: "sticky", top: 100 }}>
+          <SectionLabel>Order summary</SectionLabel>
+          {[["3 items", "₹10,080"], ["Shipping", "Free"], ["Gift wrapping", "₹199"]].map(([l, v]) => (
+            <div key={l} style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: 13, color: N.grey1 }}>
+              <span>{l}</span><span>{v}</span>
+            </div>
+          ))}
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 500, borderTop: `1px solid ${N.grey4}`, paddingTop: 14, marginTop: 8, marginBottom: 20 }}>
+            <span>Total</span><span>₹10,279</span>
+          </div>
+          <BtnPrimary onClick={() => go("confirmed")} style={{ width: "100%" }}>Place order — ₹10,279</BtnPrimary>
+        </div>
+      </div>
+    </Container>
+  </PageShell>
+);
+
+// ─── CONFIRMED PAGE ─────────────────────────────────────────────────────────
+const ConfirmedPage = ({ go }) => (
+  <PageShell go={go} page="shop">
+    <Container style={{ padding: "64px 32px 96px", textAlign: "center" }}>
+      <div style={{ width: 64, height: 64, border: `1px solid ${N.black}`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+        <Icon name="check" size={26} color={N.black} />
+      </div>
+      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, fontWeight: 300, marginBottom: 8 }}>Order placed.</div>
+      <div style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: N.grey2, marginBottom: 8 }}>Order #NIC-21034</div>
+      <p style={{ fontSize: 13, color: N.grey1, lineHeight: 1.8, marginBottom: 36, maxWidth: 380, margin: "0 auto 36px" }}>
+        Your 3 pieces are being packed with care and will arrive in 4–6 working days.
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, maxWidth: 620, margin: "0 auto 32px", textAlign: "left" }} className="nic-grid-2">
+        <div style={{ background: N.white, border: `1px solid ${N.grey4}`, padding: 20 }}>
+          <SectionLabel>What's in your order</SectionLabel>
+          {["Valley Vase", "Indigo Dinner Plates", "Brass Taper Candles"].map((n) => (
+            <div key={n} style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+              <Placeholder w={44} h={44} />
+              <span style={{ fontSize: 13 }}>{n}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: N.white, border: `1px solid ${N.grey4}`, padding: 20 }}>
+          <SectionLabel>A style tip</SectionLabel>
+          <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.75 }}>
+            Once your pieces arrive, add them to My Room to see how to style them together in your actual space.
+          </p>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+        <BtnPrimary onClick={() => go("shop")}>Continue exploring</BtnPrimary>
+        <BtnOutline onClick={() => go("orders")}>View my orders</BtnOutline>
+      </div>
+    </Container>
+  </PageShell>
+);
+
+// ─── ACCOUNT (PROFILE) PAGE ─────────────────────────────────────────────────
+const AccountPage = ({ go }) => (
+  <PageShell go={go} page="account">
+    <Container style={{ padding: "40px 32px 72px", display: "grid", gridTemplateColumns: "300px 1fr", gap: 48 }} className="nic-grid-2">
+      <div>
+        <div style={{ textAlign: "center", paddingBottom: 24, borderBottom: `1px solid ${N.grey4}`, marginBottom: 20 }}>
+          <Placeholder w={80} h={80} style={{ borderRadius: "50%", margin: "0 auto 14px" }} />
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24 }}>Priya Mehta</div>
+          <div style={{ fontSize: 11, color: N.grey2, marginTop: 4 }}>p*****a@gmail.com</div>
+          <div style={{ display: "inline-block", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", border: `1px solid ${N.grey3}`, padding: "4px 12px", color: N.grey2, marginTop: 10 }}>Gold member</div>
+        </div>
+        <div style={{ border: `1px solid ${N.grey4}` }}>
+          {[
+            { label: "Order history", icon: "bag", screen: "orders" },
+            { label: "Saved wishlist", icon: "heart", screen: "wishlist" },
+            { label: "Notifications", icon: "star", screen: null },
+            { label: "My Room photos", icon: "camera", screen: "room" },
+          ].map((r, i) => (
+            <div key={r.label} onClick={() => r.screen && go(r.screen)} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 18px", borderTop: i > 0 ? `1px solid ${N.grey4}` : "none", cursor: r.screen ? "pointer" : "default" }}>
+              <Icon name={r.icon} size={17} color={N.grey2} />
+              <span style={{ flex: 1, fontSize: 13 }}>{r.label}</span>
+              <Icon name="chevron-right" size={14} color={N.grey3} />
+            </div>
+          ))}
+        </div>
+        <BtnOutline onClick={() => go("home")} style={{ marginTop: 24, width: "100%" }}>Sign out</BtnOutline>
+      </div>
+      <div>
+        <SectionLabel>My home style</SectionLabel>
+        <div style={{ border: `1px solid ${N.grey4}`, padding: "20px 24px", marginBottom: 32, background: N.grey5, maxWidth: 480 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 6 }}>Warm & earthy</div>
+          <div style={{ fontSize: 12, color: N.grey1, lineHeight: 1.65 }}>Terracotta, wood, linen — grounded and tactile</div>
+          <div style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: N.grey2, marginTop: 12, cursor: "pointer", textDecoration: "underline" }}>Change preference</div>
+        </div>
+        <SectionLabel>Recently viewed</SectionLabel>
+        <div className="nic-grid">
+          {["Valley Vase", "Indigo Plates", "Rattan Mirror", "Taper Candles"].map((n) => (
+            <div key={n} onClick={() => go("product")} style={{ cursor: "pointer" }}>
+              <Placeholder aspect="3/4" label={n} />
+              <div style={{ marginTop: 8, fontSize: 12 }}>{n}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Container>
+  </PageShell>
+);
+
+// ════════════════════════════════════════════════════════════════════════════
+// APP
+// ════════════════════════════════════════════════════════════════════════════
+
+const PAGE_REGISTRY = {
+  home: HomePage,
+  login: LoginPage,
+  forgot: ForgotPage,
+  found: FoundPage,
+  otp: OtpPage,
+  shop: ShopPage,
+  swipe: SwipePage,
+  product: ProductPage,
+  maker: MakerPage,
+  room: RoomPage,
+  wishlist: WishlistPage,
+  orders: OrdersPage,
+  cart: CartPage,
+  checkout: CheckoutPage,
+  confirmed: ConfirmedPage,
+  account: AccountPage,
+};
+
+const PAGE_LABELS = Object.keys(PAGE_REGISTRY);
+
+function NicobarWebsite() {
+  const [page, setPage] = useState("home");
+  const go = (p) => {
+    setPage(p);
+    window.scrollTo(0, 0);
+  };
+  const Page = PAGE_REGISTRY[page] || HomePage;
+
+  return (
+    <div>
+      {/* Dev-only page switcher, mimics a browser's address bar for quick navigation between pages */}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, background: "#111", padding: "8px 16px", display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "center" }}>
+        {PAGE_LABELS.map((p) => (
+          <button
+            key={p}
+            onClick={() => go(p)}
+            style={{
+              padding: "5px 10px", fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase",
+              border: `1px solid ${page === p ? "#fff" : "#444"}`,
+              background: page === p ? "#fff" : "transparent",
+              color: page === p ? "#111" : "#999",
+              fontFamily: "'Jost', sans-serif", cursor: "pointer",
+            }}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+      <div style={{ paddingBottom: 44 }}>
+        <Page go={go} />
+      </div>
+    </div>
+  );
+}
+
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(NicobarWebsite));
+    </script>
+    <script>
+      var source = document.getElementById('app-source').textContent;
+      var output = Babel.transform(source, { presets: [["react", { runtime: "classic" }]] }).code;
+      (0, eval)(output);
+    </script>
+  </body>
+</html>
