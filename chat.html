@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ask the closet — aanu's closet</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="cc-nav">
+  <div class="cc-logo">aanu&apos;s <span class="wiggle">closet</span> 🧦</div>
+  <div class="cc-nav-links">
+    <a href="index.html">closet</a>
+    <a href="wishlist.html">wishlist</a>
+    <a href="chat.html" class="active">ask the closet</a>
+  </div>
+</nav>
+
+<div class="cc-note-banner">
+  prototype mode: replies are simulated locally. wire this up to the Claude API via a
+  server route once you bring this into Claude Code — see script.js / README for the drop-in fetch call.
+</div>
+
+<div class="cc-chat-wrap">
+  <div class="cc-chat-log" id="chatLog"></div>
+  <form class="cc-chat-form" id="chatForm">
+    <input id="chatInput" type="text" placeholder="e.g. brunch with the girls, want to feel put together but not try-hard" autocomplete="off" />
+    <button type="submit" class="cc-btn">send</button>
+  </form>
+</div>
+
+<script src="data.js"></script>
+<script src="script.js"></script>
+<script>initChat();</script>
+</body>
+</html>
