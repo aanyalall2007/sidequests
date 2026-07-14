@@ -11,26 +11,33 @@
   <body>
     <div id="root"></div>
     <script type="text/plain" id="app-source">
-const { useState } = React;
+const { useState, useRef, useEffect } = React;
 
-// ─── DESIGN TOKENS (from nicobar.com inspection) ───────────────────────────
-// Font: Futura PT (sans), Cormorant Garamond (serif) — via Google Fonts proxy
-// Colors: white background, near-black text #1a1a1a, accent none (pure editorial)
-// Logo font: custom — replicated via letter-spacing + Cormorant Garamond
+// ─── DESIGN TOKENS (live-inspected from nicobar.com, July 2026) ────────────
+// Real fonts: EuclidFlex (sans, weights 300/500/bold) for all UI/body/prices;
+//   NewParisText / Butler (serif) for warm editorial headlines — "Hurray!",
+//   "Nice to meet you", "Your Shopping Bag Is Empty". Both are Nicobar's own
+//   licensed/CDN-hosted fonts, not on Google Fonts — standing in with the
+//   closest free equivalents: Inter (sans) + Fraunces (serif).
+// Colors: white/cream background, near-black text rgb(28,27,27)/rgb(40,43,48),
+//   no brand accent color — palette is pure editorial neutral. The bright
+//   pink/orange/teal/purple circles seen on nicobar.com are a temporary sale
+//   campaign overlay, not the actual brand identity — do not use as tokens.
+// Logo: "NICOBAR" wordmark, wide tracking, the "O" replaced by a circle +
+//   small wave squiggle underneath (ocean motif) — see NicobarLogo below.
 // Nav: uppercase, 11px, letter-spacing 0.14em, font-weight 500
-// Buttons: all-caps, no border-radius, solid black fill or outlined
-// Product names: 13px, weight 400
-// Prices: 13px, weight 400
-// Section headings: uppercase, 10px, letter-spacing 0.2em
+// Buttons: all-caps, no border-radius (sharp corners), solid near-black fill
+//   rgb(41,41,41) or outlined, white text, letter-spacing 2px, 13px
+// Prices: shown as "MRP ₹ X,XXX" + "Inclusive of all taxes" in grey, 14px
 
 const FONT_URL =
-  "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap";
+  "https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap";
 
-// Nicobar exact palette from site inspection
+// Nicobar exact palette from live site inspection
 const N = {
   white: "#FFFFFF",
   bg: "#FFFFFF",
-  black: "#1a1a1a",
+  black: "#1c1b1b",
   grey1: "#4a4a4a",   // body text secondary
   grey2: "#888888",   // captions, labels
   grey3: "#bbbbbb",   // borders, dividers
@@ -39,63 +46,338 @@ const N = {
   grey6: "#f0f0f0",   // placeholder image bg
   cream: "#faf7f2",   // their off-white background
   creamDark: "#f0ebe1", // slightly darker cream
-  accent: "#1a1a1a",  // no brand accent color — pure B&W
+  accent: "#1c1b1b",  // no brand accent color — pure editorial neutral
 };
 
 const globalStyle = `
 @import url('${FONT_URL}');
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Jost', sans-serif; background: #e8e4de; }
-input, button, select, textarea { font-family: 'Jost', sans-serif; }
+body { font-family: 'Inter', sans-serif; background: #e8e4de; }
+input, button, select, textarea { font-family: 'Inter', sans-serif; }
 button { cursor: pointer; }
 ::-webkit-scrollbar { display: none; }
 `;
 
+// ─── PHOTO LIBRARY (real Nicobar CDN photography, keyed by Placeholder label) ─
+// Sourced live from nicobar.com product/decor pages. Portraits (maker, member
+// avatars) and the "your room" AR slot are deliberately left as placeholders —
+// those represent specific fictional people or the user's own photo, and
+// shouldn't be filled with a real stranger's likeness.
+const PHOTO_LIBRARY = {
+  "Valley Vase": "https://www.nicobar.com/cdn/shop/files/NBI035851_1.jpg",
+  "Indigo Dinner Plates": "https://www.nicobar.com/cdn/shop/files/NBI034645_9_255c3bd7-9d72-4bf6-86e3-b5a94a99f1f4.jpg",
+  "Indigo Plates": "https://www.nicobar.com/cdn/shop/files/NBI034645_9_255c3bd7-9d72-4bf6-86e3-b5a94a99f1f4.jpg",
+  "Brass Taper Candles": "https://www.nicobar.com/cdn/shop/files/Decor_Votives_260626.jpg",
+  "Taper Candles": "https://www.nicobar.com/cdn/shop/files/Decor_Votives_260626.jpg",
+  "Brass Taper Candle Set": "https://www.nicobar.com/cdn/shop/files/Decor_Votives_260626.jpg",
+  "Rattan Wall Mirror": "https://www.nicobar.com/cdn/shop/files/NBI033651_1_1200x.jpg",
+  "Rattan Mirror": "https://www.nicobar.com/cdn/shop/files/NBI033651_1_1200x.jpg",
+  "Nadi Vase": "https://www.nicobar.com/cdn/shop/files/NBI016416_1_1200x.jpg",
+  "Palm Mug": "https://www.nicobar.com/cdn/shop/files/NBI048972_1_1200x.jpg",
+  "Diya Set": "https://www.nicobar.com/cdn/shop/files/NBI037675_5_1200x.jpg",
+  "Clay Tea Pot": "https://www.nicobar.com/cdn/shop/files/NBI020672_5.jpg",
+  "Chai Cups ×4": "https://www.nicobar.com/cdn/shop/files/NBI020672_5.jpg",
+  "Spice Jar Set": "https://www.nicobar.com/cdn/shop/files/NBI037678_2.jpg",
+  "Hero — Nicobar home collection campaign image": "https://www.nicobar.com/cdn/shop/files/home_styling.jpg",
+  "Nicobar home campaign — dining & decor styled shoot": "https://www.nicobar.com/cdn/shop/files/NBI033651_1_1200x.jpg",
+  "Valley Vase — product photography, white background, hero shot": "https://www.nicobar.com/cdn/shop/files/NBI035851_1.jpg",
+  "View 1": "https://www.nicobar.com/cdn/shop/files/NBI035851_1.jpg",
+  "View 2": "https://www.nicobar.com/cdn/shop/files/NBI035851_2_1200x.jpg",
+  "View 3": "https://www.nicobar.com/cdn/shop/files/NBI035851_3.jpg",
+  "View 4": "https://www.nicobar.com/cdn/shop/files/NBI016416_1_1200x.jpg",
+};
+
+// ─── CLIENT-SIDE BACKGROUND CUTOUT (free, real — no AI service required) ────
+// Nicobar's product studio shots sit on a near-uniform grey/white seamless
+// background. We flood-fill inward from the image border, matching pixels
+// within a color-distance tolerance of the border color, so only the
+// background (not similarly-toned highlights *inside* the product) gets
+// cut. The mask is computed at low-res for speed, feathered with a box blur
+// for a soft anti-aliased edge, then scaled back up over the full-res image.
+const ROOM_PLACEMENT_IMAGE = {
+  "Valley Vase": "https://www.nicobar.com/cdn/shop/files/NBI016416_1_1200x.jpg",
+  "Indigo Plates": "https://www.nicobar.com/cdn/shop/files/NBI034645_6.jpg",
+  "Taper Candles": "https://www.nicobar.com/cdn/shop/files/NBI034449_1_1200x.jpg",
+  // Rattan Mirror has no clean-background shot on nicobar.com (always styled
+  // against a textured wall) — it's rendered as a framed rectangle instead,
+  // which reads naturally since mirrors are inherently flat & rectangular.
+};
+
+const cutoutCache = {};
+
+function computeCutout(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const work = 360;
+        const scale = Math.min(1, work / Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.max(1, Math.round(img.naturalWidth * scale));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const small = document.createElement("canvas");
+        small.width = w; small.height = h;
+        const sctx = small.getContext("2d");
+        sctx.drawImage(img, 0, 0, w, h);
+        const data = sctx.getImageData(0, 0, w, h);
+        const px = data.data;
+
+        // Adaptive neighbor-to-neighbor flood fill: each candidate pixel is
+        // compared both to the color it's spreading FROM (lets the fill
+        // follow a soft studio vignette/gradient) and to the overall border
+        // average (caps total drift so soft contact-shadows can't act as a
+        // bridge all the way into the product itself).
+        let br = 0, bg = 0, bb = 0, n = 0;
+        for (let x = 0; x < w; x++) {
+          for (const y of [0, h - 1]) { const i = (y * w + x) * 4; br += px[i]; bg += px[i+1]; bb += px[i+2]; n++; }
+        }
+        for (let y = 0; y < h; y++) {
+          for (const x of [0, w - 1]) { const i = (y * w + x) * 4; br += px[i]; bg += px[i+1]; bb += px[i+2]; n++; }
+        }
+        br /= n; bg /= n; bb /= n;
+
+        const stepTolerance = 16;
+        const globalTolerance = 60;
+        const mask = new Uint8Array(w * h);
+        const visited = new Uint8Array(w * h);
+        const stack = [];
+        const pushSeed = (i) => stack.push([i, px[i*4], px[i*4+1], px[i*4+2]]);
+        for (let x = 0; x < w; x++) { pushSeed(x); pushSeed((h - 1) * w + x); }
+        for (let y = 0; y < h; y++) { pushSeed(y * w); pushSeed(y * w + (w - 1)); }
+
+        while (stack.length) {
+          const [i, refR, refG, refB] = stack.pop();
+          if (visited[i]) continue;
+          const o = i * 4;
+          const dr = px[o] - refR, dg = px[o+1] - refG, db = px[o+2] - refB;
+          if (Math.sqrt(dr*dr + dg*dg + db*db) > stepTolerance) continue;
+          const gdr = px[o] - br, gdg = px[o+1] - bg, gdb = px[o+2] - bb;
+          if (Math.sqrt(gdr*gdr + gdg*gdg + gdb*gdb) > globalTolerance) continue;
+          visited[i] = 1;
+          mask[i] = 1;
+          const x = i % w, y = (i / w) | 0;
+          const cr = px[o], cg = px[o+1], cb = px[o+2];
+          if (x > 0 && !visited[i - 1]) stack.push([i - 1, cr, cg, cb]);
+          if (x < w - 1 && !visited[i + 1]) stack.push([i + 1, cr, cg, cb]);
+          if (y > 0 && !visited[i - w]) stack.push([i - w, cr, cg, cb]);
+          if (y < h - 1 && !visited[i + w]) stack.push([i + w, cr, cg, cb]);
+        }
+
+        // feather: box blur the mask a couple passes so edges aren't jagged
+        let alpha = new Float32Array(w * h);
+        for (let i = 0; i < w * h; i++) alpha[i] = mask[i] ? 0 : 255;
+        for (let pass = 0; pass < 2; pass++) {
+          const next = new Float32Array(w * h);
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              let sum = 0, cnt = 0;
+              for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                  const nx = x + dx, ny = y + dy;
+                  if (nx >= 0 && nx < w && ny >= 0 && ny < h) { sum += alpha[ny * w + nx]; cnt++; }
+                }
+              }
+              next[y * w + x] = sum / cnt;
+            }
+          }
+          alpha = next;
+        }
+
+        const maskCanvas = document.createElement("canvas");
+        maskCanvas.width = w; maskCanvas.height = h;
+        const mctx = maskCanvas.getContext("2d");
+        const maskData = mctx.createImageData(w, h);
+        for (let i = 0; i < w * h; i++) {
+          maskData.data[i*4] = 0; maskData.data[i*4+1] = 0; maskData.data[i*4+2] = 0;
+          maskData.data[i*4+3] = alpha[i];
+        }
+        mctx.putImageData(maskData, 0, 0);
+
+        const full = document.createElement("canvas");
+        full.width = img.naturalWidth; full.height = img.naturalHeight;
+        const fctx = full.getContext("2d");
+        fctx.drawImage(img, 0, 0);
+        const fullData = fctx.getImageData(0, 0, full.width, full.height);
+
+        const maskUpscale = document.createElement("canvas");
+        maskUpscale.width = full.width; maskUpscale.height = full.height;
+        const muCtx = maskUpscale.getContext("2d");
+        muCtx.imageSmoothingEnabled = true;
+        muCtx.drawImage(maskCanvas, 0, 0, full.width, full.height);
+        const maskFullData = muCtx.getImageData(0, 0, full.width, full.height);
+
+        for (let i = 0; i < full.width * full.height; i++) {
+          fullData.data[i*4+3] = maskFullData.data[i*4+3];
+        }
+        fctx.putImageData(fullData, 0, 0);
+        resolve(full.toDataURL("image/png"));
+      } catch (err) {
+        resolve(url);
+      }
+    };
+    img.onerror = () => resolve(url);
+    img.src = url;
+  });
+}
+
+function getCutout(piece) {
+  const src = ROOM_PLACEMENT_IMAGE[piece];
+  if (!src) return Promise.resolve(null);
+  if (!cutoutCache[piece]) cutoutCache[piece] = computeCutout(src);
+  return cutoutCache[piece];
+}
+
+// ─── PLACED PIECE SIZES (approximate real-world proportions, for AR realism) ─
+const PLACED_SIZE = {
+  "Valley Vase": { w: 44, h: 74 },
+  "Indigo Plates": { w: 88, h: 62 },
+  "Taper Candles": { w: 92, h: 54 },
+  "Rattan Mirror": { w: 56, h: 76 },
+};
+
+// ─── PLACED PIECE (draggable cutout + contact shadow, for realistic AR feel) ─
+const PlacedPiece = ({ p, onDragStart, onDragMove, onDragEnd, onRemove }) => {
+  const size = PLACED_SIZE[p.piece] || { w: 64, h: 64 };
+  const [cutout, setCutout] = useState(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    getCutout(p.piece).then((src) => { if (live) { setCutout(src); setReady(true); } });
+    return () => { live = false; };
+  }, [p.piece]);
+
+  const hasCutout = ready && cutout;
+  // No clean-background source (e.g. Rattan Mirror) — render as a small
+  // framed rectangle instead, which reads naturally since the object itself
+  // is flat and rectangular.
+  const isFramed = ready && !cutout;
+
+  return (
+    <div
+      onPointerDown={(e) => { e.stopPropagation(); e.target.setPointerCapture(e.pointerId); onDragStart(p.id); }}
+      onPointerMove={(e) => { e.stopPropagation(); onDragMove(e); }}
+      onPointerUp={(e) => { e.stopPropagation(); onDragEnd(); }}
+      style={{
+        position: "absolute", left: `${p.x}%`, top: `${p.y}%`, transform: "translate(-50%, -50%)",
+        width: size.w, cursor: "grab", touchAction: "none", userSelect: "none",
+        opacity: ready ? 1 : 0, transition: "opacity 0.25s ease, transform 0.2s ease",
+      }}
+    >
+      {/* contact shadow — grounds the piece on the surface */}
+      <div
+        style={{
+          position: "absolute", bottom: isFramed ? -3 : -4, left: "50%", transform: "translateX(-50%)",
+          width: size.w * (isFramed ? 0.7 : 0.8), height: isFramed ? 7 : 10, borderRadius: "50%",
+          background: "radial-gradient(ellipse, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 72%)",
+          filter: "blur(1.5px)", zIndex: 0,
+        }}
+      />
+      {isFramed ? (
+        <div style={{ position: "relative", zIndex: 1, width: size.w, height: size.h, background: N.white, padding: 3, boxShadow: "0 8px 16px rgba(0,0,0,0.35)", borderRadius: 3 }}>
+          <img src={PHOTO_LIBRARY[p.piece]} alt={p.piece} draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", borderRadius: 1 }} />
+        </div>
+      ) : (
+        <img
+          src={hasCutout ? cutout : PHOTO_LIBRARY[p.piece]}
+          alt={p.piece}
+          draggable={false}
+          style={{
+            position: "relative", zIndex: 1, width: size.w, height: size.h, objectFit: "contain",
+            filter: "drop-shadow(0 8px 8px rgba(0,0,0,0.4))", display: "block", pointerEvents: "none",
+          }}
+        />
+      )}
+      <button
+        onClick={(ev) => onRemove(p.id, ev)}
+        onPointerDown={(ev) => ev.stopPropagation()}
+        title="Remove"
+        style={{
+          position: "absolute", top: -8, right: -8, width: 20, height: 20, borderRadius: "50%",
+          background: "rgba(255,255,255,0.95)", border: "1px solid rgba(0,0,0,0.15)", color: "#1c1b1b",
+          fontSize: 12, lineHeight: "18px", padding: 0, cursor: "pointer", zIndex: 2,
+          boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
+        }}
+      >
+        ×
+      </button>
+    </div>
+  );
+};
+
 // ─── PLACEHOLDER IMAGE COMPONENT ────────────────────────────────────────────
-const Placeholder = ({ w, h, label = "", style = {}, aspect }) => (
-  <div
-    style={{
-      width: w || "100%",
-      height: h,
-      aspectRatio: aspect,
-      background: N.grey6,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-      ...style,
-    }}
-  >
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={N.grey3} strokeWidth="1.2">
-      <rect x="3" y="3" width="18" height="18" rx="1"/>
-      <circle cx="8.5" cy="8.5" r="1.5"/>
-      <polyline points="21 15 16 10 5 21"/>
-    </svg>
-    {label && (
-      <span style={{ fontSize: 9, color: N.grey3, marginTop: 5, letterSpacing: "0.08em", textTransform: "uppercase", textAlign: "center", padding: "0 8px" }}>
-        {label}
-      </span>
-    )}
-  </div>
-);
+const Placeholder = ({ w, h, label = "", style = {}, aspect }) => {
+  const photo = PHOTO_LIBRARY[label];
+  if (photo) {
+    return (
+      <img
+        src={photo}
+        alt={label}
+        style={{
+          width: w || "100%",
+          height: h,
+          aspectRatio: aspect,
+          objectFit: "cover",
+          flexShrink: 0,
+          display: "block",
+          ...style,
+        }}
+      />
+    );
+  }
+  return (
+    <div
+      style={{
+        width: w || "100%",
+        height: h,
+        aspectRatio: aspect,
+        background: N.grey6,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        ...style,
+      }}
+    >
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={N.grey3} strokeWidth="1.2">
+        <rect x="3" y="3" width="18" height="18" rx="1"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+      {label && (
+        <span style={{ fontSize: 9, color: N.grey3, marginTop: 5, letterSpacing: "0.08em", textTransform: "uppercase", textAlign: "center", padding: "0 8px" }}>
+          {label}
+        </span>
+      )}
+    </div>
+  );
+};
 
 // ─── NICOBAR LOGO ────────────────────────────────────────────────────────────
-const NicobarLogo = ({ size = 18, color = N.black }) => (
-  <span
-    style={{
-      fontFamily: "'Cormorant Garamond', serif",
-      fontSize: size,
-      fontWeight: 400,
-      letterSpacing: "0.22em",
-      color,
-      textTransform: "uppercase",
-      userSelect: "none",
-    }}
-  >
-    Nicobar
-  </span>
-);
+// Real wordmark: thin geometric sans, wide tracking — the "O" in NICOBAR is
+// replaced by a small circle sitting on a wave squiggle (an ocean motif).
+const NicobarLogo = ({ size = 18, color = N.black }) => {
+  const dot = size * 0.62;
+  return (
+    <span
+      style={{
+        display: "inline-flex", alignItems: "center",
+        fontFamily: "'Inter', sans-serif", fontWeight: 300, fontSize: size,
+        letterSpacing: "0.18em", color, textTransform: "uppercase", userSelect: "none",
+      }}
+    >
+      NIC
+      <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: dot, margin: `0 ${size * 0.06}px` }}>
+        <span style={{ width: dot * 0.7, height: dot * 0.7, borderRadius: "50%", border: `${Math.max(1, size * 0.07)}px solid ${color}`, marginBottom: dot * 0.1 }} />
+        <svg width={dot * 0.85} height={dot * 0.32} viewBox="0 0 20 8">
+          <path d="M1 4 Q5 0.5 10 4 T19 4" fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+      </span>
+      BAR
+    </span>
+  );
+};
 
 // ─── PHONE SHELL ─────────────────────────────────────────────────────────────
 const Phone = ({ children }) => (
@@ -233,7 +515,7 @@ const BtnPrimary = ({ children, onClick, style = {} }) => (
     style={{
       width: "100%", padding: "14px 16px", background: N.black, color: N.white,
       border: "none", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase",
-      fontWeight: 500, fontFamily: "'Jost', sans-serif", ...style,
+      fontWeight: 500, fontFamily: "'Inter', sans-serif", ...style,
     }}
   >
     {children}
@@ -246,7 +528,7 @@ const BtnOutline = ({ children, onClick, style = {} }) => (
     style={{
       width: "100%", padding: "13px 16px", background: N.white, color: N.black,
       border: `1px solid ${N.black}`, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase",
-      fontWeight: 500, fontFamily: "'Jost', sans-serif", ...style,
+      fontWeight: 500, fontFamily: "'Inter', sans-serif", ...style,
     }}
   >
     {children}
@@ -262,7 +544,7 @@ const Input = ({ label, ...props }) => (
       style={{
         width: "100%", padding: "13px 14px", border: `1px solid ${N.grey4}`,
         fontSize: 13, color: N.black, outline: "none", background: N.white,
-        fontFamily: "'Jost', sans-serif", letterSpacing: "0.02em",
+        fontFamily: "'Inter', sans-serif", letterSpacing: "0.02em",
       }}
     />
   </div>
@@ -291,7 +573,7 @@ const OtpBoxes = ({ values = ["8", "4", "2", ""] }) => (
       <div key={i} style={{
         width: 60, height: 64, border: `1px solid ${v ? N.black : N.grey4}`,
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: N.black,
+        fontFamily: "'Fraunces', serif", fontSize: 28, color: N.black,
         background: v ? N.white : N.grey5,
       }}>
         {v}
@@ -325,7 +607,7 @@ const ChipFilter = ({ options, active, onChange }) => (
           background: active === o ? N.black : N.white,
           color: active === o ? N.white : N.grey1,
           fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
-          fontFamily: "'Jost', sans-serif",
+          fontFamily: "'Inter', sans-serif",
         }}
       >
         {o}
@@ -376,7 +658,7 @@ const MakerCard = ({ name, role, location, quote, go }) => (
       </div>
       <span style={{ marginLeft: "auto", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: N.grey2, whiteSpace: "nowrap", alignSelf: "flex-start" }}>Read story</span>
     </div>
-    <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontStyle: "italic", color: N.grey1, lineHeight: 1.75, paddingLeft: 12, borderLeft: `2px solid ${N.grey3}` }}>
+    <p style={{ fontFamily: "'Fraunces', serif", fontSize: 15, fontStyle: "italic", color: N.grey1, lineHeight: 1.75, paddingLeft: 12, borderLeft: `2px solid ${N.grey3}` }}>
       "{quote}"
     </p>
   </div>
@@ -397,16 +679,16 @@ const PRODUCTS = [
 ];
 
 const STYLED_LOOKS = [
-  { title: "The Monsoon Table", meta: "Monsoon 25 · Dining · 4 pieces", tags: ["Terracotta", "Hand-thrown", "Dining"], price: "₹8,490 for the set" },
-  { title: "Still Evening", meta: "Perennial · Living room · 3 pieces", tags: ["Brass", "Hand-glazed", "Ambient"], price: "₹6,290 for the set" },
-  { title: "Morning Ritual", meta: "Everyday · Dining · 5 pieces", tags: ["Clay", "Warm", "Breakfast"], price: "₹5,190 for the set" },
+  { title: "The Monsoon Table", meta: "Monsoon 25 · Dining · 4 pieces", tags: ["Terracotta", "Hand-thrown", "Dining"], price: "₹8,490 for the set", img: "https://www.nicobar.com/cdn/shop/files/NBI034638_1_700x.jpg" },
+  { title: "Still Evening", meta: "Perennial · Living room · 3 pieces", tags: ["Brass", "Hand-glazed", "Ambient"], price: "₹6,290 for the set", img: "https://www.nicobar.com/cdn/shop/files/Decor_Votives_260626.jpg" },
+  { title: "Morning Ritual", meta: "Everyday · Dining · 5 pieces", tags: ["Clay", "Warm", "Breakfast"], price: "₹5,190 for the set", img: "https://www.nicobar.com/cdn/shop/files/NBI034521_4_700x.jpg" },
 ];
 
 // ─── STYLED LOOKS CAROUSEL (editorial, full-bleed, before the plain grid) ────
 const StyledLooksCarousel = ({ go }) => (
   <div style={{ padding: "4px 0 8px" }}>
     <div style={{ padding: "0 16px", marginBottom: 12 }}>
-      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: N.black, marginBottom: 2 }}>Styled looks</div>
+      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: N.black, marginBottom: 2 }}>Styled looks</div>
       <div style={{ fontSize: 11, color: N.grey2, letterSpacing: "0.02em" }}>Full rooms, styled by us — shop the whole scene</div>
     </div>
     <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "0 16px 6px", scrollSnapType: "x mandatory" }}>
@@ -416,11 +698,15 @@ const StyledLooksCarousel = ({ go }) => (
           onClick={() => go("product")}
           style={{ position: "relative", flexShrink: 0, width: "82%", aspectRatio: "3/4", cursor: "pointer", scrollSnapAlign: "start", overflow: "hidden" }}
         >
-          <Placeholder w="100%" h="100%" label={look.title + " — styled scene"} style={{ position: "absolute", inset: 0 }} />
+          {look.img ? (
+            <img src={look.img} alt={look.title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <Placeholder w="100%" h="100%" label={look.title + " — styled scene"} style={{ position: "absolute", inset: 0 }} />
+          )}
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)" }} />
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 16 }}>
             <div style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 4 }}>{look.meta}</div>
-            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: N.white, marginBottom: 8 }}>{look.title}</div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: N.white, marginBottom: 8 }}>{look.title}</div>
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
               {look.tags.map((t) => (
                 <span key={t} style={{ fontSize: 8, letterSpacing: "0.1em", textTransform: "uppercase", border: "0.5px solid rgba(255,255,255,0.5)", padding: "3px 8px", color: "rgba(255,255,255,0.9)" }}>{t}</span>
@@ -436,6 +722,26 @@ const StyledLooksCarousel = ({ go }) => (
     </div>
   </div>
 );
+
+// ─── STYLE BRIEF (derived from the tags on liked pieces after a swipe run) ──
+const STYLE_PROFILES = [
+  { tag: "Terracotta", title: "Warm & Earthy", blurb: "Terracotta and hand-thrown texture kept catching your eye — you like a table that feels grounded, sun-baked, a little imperfect." },
+  { tag: "Brass", title: "Moody & Ambient", blurb: "Brass and soft firelight came up again and again — you're building a room that glows after dark." },
+  { tag: "Rattan", title: "Textured & Natural", blurb: "Rattan and woven texture stood out — natural materials, a relaxed, layered feel." },
+  { tag: "Block print", title: "Pattern-Forward", blurb: "Bold block-printed pattern caught your eye — you like a table that makes a statement." },
+  { tag: "Hand-glazed", title: "Handmade & Tactile", blurb: "Hand-glazed, one-of-a-kind pieces are your thing — nothing that looks mass-produced." },
+];
+
+function getStyleBrief(liked) {
+  const fallback = { title: "Eclectic Explorer", blurb: "You kept an open mind across the board — a little bit of everything caught your interest.", tags: [] };
+  if (liked.length === 0) return fallback;
+  const counts = {};
+  liked.forEach((p) => p.tags.forEach((t) => { counts[t] = (counts[t] || 0) + 1; }));
+  const topTags = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t]) => t);
+  const profile = STYLE_PROFILES.find((sp) => counts[sp.tag] > 0);
+  if (!profile) return { ...fallback, tags: topTags };
+  return { title: profile.title, blurb: profile.blurb, tags: topTags };
+}
 
 // ─── SWIPE DECK (Tinder-style like / skip for taste-based recommendations) ──
 const SwipeDeck = ({ go, cardW = 300, cardH = 380 }) => {
@@ -481,10 +787,25 @@ const SwipeDeck = ({ go, cardW = 300, cardH = 380 }) => {
 
   if (done) {
     const recs = recommendations();
+    const brief = getStyleBrief(liked);
     return (
       <div style={{ padding: "8px 16px 24px", textAlign: "center" }}>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, marginBottom: 6 }}>You liked {liked.length} of {deck.length}</div>
-        <p style={{ fontSize: 11, color: N.grey1, lineHeight: 1.7, marginBottom: 18 }}>Here's what we'd recommend based on your taste</p>
+        <div style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: N.grey2, marginBottom: 4 }}>You liked {liked.length} of {deck.length}</div>
+
+        <div style={{ border: `1px solid ${N.grey4}`, background: N.grey5, padding: "18px 18px 16px", margin: "10px 0 20px", textAlign: "left" }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: N.grey2, marginBottom: 8 }}>Your style</div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, color: N.black, marginBottom: 8 }}>{brief.title}</div>
+          <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.75, letterSpacing: "0.02em", marginBottom: brief.tags.length ? 12 : 0 }}>{brief.blurb}</p>
+          {brief.tags.length > 0 && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {brief.tags.map((t) => (
+                <span key={t} style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", border: `0.5px solid ${N.grey3}`, padding: "4px 9px", color: N.grey1 }}>{t}</span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <p style={{ fontSize: 11, color: N.grey1, lineHeight: 1.7, marginBottom: 18 }}>Here's what we'd recommend based on your style</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, textAlign: "left" }}>
           {recs.map((p) => (
             <div key={p.name} onClick={() => go("product")} style={{ cursor: "pointer" }}>
@@ -494,7 +815,8 @@ const SwipeDeck = ({ go, cardW = 300, cardH = 380 }) => {
             </div>
           ))}
         </div>
-        <BtnOutline style={{ marginTop: 18 }} onClick={() => { setIndex(0); setLiked([]); setPassed([]); }}>Swipe again</BtnOutline>
+        <BtnPrimary style={{ marginTop: 18 }} onClick={() => go("discover")}>Explore curated looks</BtnPrimary>
+        <BtnOutline style={{ marginTop: 10 }} onClick={() => { setIndex(0); setLiked([]); setPassed([]); }}>Swipe again</BtnOutline>
       </div>
     );
   }
@@ -506,7 +828,7 @@ const SwipeDeck = ({ go, cardW = 300, cardH = 380 }) => {
   return (
     <div style={{ padding: "8px 16px 24px" }}>
       <div style={{ textAlign: "center", marginBottom: 14 }}>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20 }}>Swipe for your style</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20 }}>Swipe for your style</div>
         <div style={{ fontSize: 10, color: N.grey2, marginTop: 2 }}>{index + 1} of {deck.length} · Swipe right to like, left to skip</div>
       </div>
       <div style={{ position: "relative", width: cardW, height: cardH, margin: "0 auto" }}>
@@ -572,7 +894,7 @@ const SwipeScreen = ({ go }) => (
   <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
     <TopNav
       left={<Icon name="arrow-left" size={18} onClick={() => go("discover")} />}
-      center={<span style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" }}>For you</span>}
+      center={<NicobarLogo size={16} />}
     />
     <Scroll>
       <SwipeDeck go={go} />
@@ -592,7 +914,7 @@ const SplashScreen = ({ go }) => (
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)" }} />
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 24 }}>
         <div style={{ fontSize: 9, letterSpacing: "0.24em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 6 }}>Nicobar Home</div>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, fontWeight: 300, color: N.white, lineHeight: 1.2, marginBottom: 8 }}>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 300, color: N.white, lineHeight: 1.2, marginBottom: 8 }}>
           A home that<br />tells your story.
         </div>
         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", lineHeight: 1.7, marginBottom: 24, letterSpacing: "0.03em" }}>
@@ -603,7 +925,7 @@ const SplashScreen = ({ go }) => (
         </BtnPrimary>
         <button
           onClick={() => go("login")}
-          style={{ width: "100%", padding: "13px", background: "transparent", border: "1px solid rgba(255,255,255,0.5)", color: N.white, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" }}
+          style={{ width: "100%", padding: "13px", background: "transparent", border: "1px solid rgba(255,255,255,0.5)", color: N.white, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif" }}
         >
           Sign in
         </button>
@@ -620,7 +942,7 @@ const LoginScreen = ({ go }) => (
     />
     <Scroll>
       <div style={{ padding: "28px 20px" }}>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 300, color: N.black, marginBottom: 6 }}>Welcome back.</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 300, color: N.black, marginBottom: 6 }}>Welcome back.</div>
         <div style={{ fontSize: 12, color: N.grey1, lineHeight: 1.75, marginBottom: 26, letterSpacing: "0.02em" }}>
           Sign in with the email or mobile linked to your Nicobar account.
         </div>
@@ -635,7 +957,7 @@ const LoginScreen = ({ go }) => (
           <div style={{ fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: N.grey2, marginBottom: 6 }}>Mobile number</div>
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{ width: 54, padding: "13px 8px", border: `1px solid ${N.grey4}`, fontSize: 12, color: N.black, textAlign: "center", background: N.grey5 }}>+91</div>
-            <input style={{ flex: 1, padding: "13px 14px", border: `1px solid ${N.grey4}`, fontSize: 13, color: N.black, outline: "none", fontFamily: "'Jost', sans-serif" }} placeholder="98765 43210" type="tel" />
+            <input style={{ flex: 1, padding: "13px 14px", border: `1px solid ${N.grey4}`, fontSize: 13, color: N.black, outline: "none", fontFamily: "'Inter', sans-serif" }} placeholder="98765 43210" type="tel" />
           </div>
         </div>
         <BtnPrimary onClick={() => go("otp")}>Send OTP</BtnPrimary>
@@ -644,7 +966,7 @@ const LoginScreen = ({ go }) => (
           style={{
             width: "100%", padding: "13px", border: `1px solid ${N.grey4}`, background: N.white,
             display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-            fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif",
+            fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif",
           }}
         >
           <Icon name="google" size={16} color={N.grey1} /> Continue with Google
@@ -665,7 +987,7 @@ const ForgotScreen = ({ go }) => (
     />
     <Scroll>
       <div style={{ padding: "28px 20px" }}>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 300, color: N.black, marginBottom: 6 }}>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 300, color: N.black, marginBottom: 6 }}>
           Can't remember<br />your email?
         </div>
         <div style={{ fontSize: 12, color: N.grey1, lineHeight: 1.75, marginBottom: 24, letterSpacing: "0.02em" }}>
@@ -675,7 +997,7 @@ const ForgotScreen = ({ go }) => (
           <div style={{ fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: N.grey2, marginBottom: 6 }}>Mobile number</div>
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{ width: 54, padding: "13px 8px", border: `1px solid ${N.grey4}`, fontSize: 12, textAlign: "center", background: N.grey5 }}>+91</div>
-            <input style={{ flex: 1, padding: "13px 14px", border: `1px solid ${N.grey4}`, fontSize: 13, outline: "none", fontFamily: "'Jost', sans-serif" }} placeholder="98765 43210" type="tel" />
+            <input style={{ flex: 1, padding: "13px 14px", border: `1px solid ${N.grey4}`, fontSize: 13, outline: "none", fontFamily: "'Inter', sans-serif" }} placeholder="98765 43210" type="tel" />
           </div>
         </div>
         <BtnPrimary onClick={() => go("found")}>Find my account</BtnPrimary>
@@ -705,7 +1027,7 @@ const EmailFoundScreen = ({ go }) => (
           <div style={{ width: 52, height: 52, border: `1px solid ${N.black}`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
             <Icon name="check" size={20} color={N.black} />
           </div>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 300, color: N.black, marginBottom: 6 }}>We found your account.</div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 300, color: N.black, marginBottom: 6 }}>We found your account.</div>
           <div style={{ fontSize: 12, color: N.grey1, letterSpacing: "0.02em" }}>Your email on file is</div>
         </div>
         <div style={{ border: `1px solid ${N.grey4}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -742,7 +1064,7 @@ const OtpScreen = ({ go }) => (
     />
     <Scroll>
       <div style={{ padding: "28px 20px" }}>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 300, color: N.black, marginBottom: 6 }}>Check your phone.</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 300, color: N.black, marginBottom: 6 }}>Check your phone.</div>
         <div style={{ fontSize: 12, color: N.grey1, letterSpacing: "0.02em", lineHeight: 1.7, marginBottom: 4 }}>We sent a 4-digit code to</div>
         <div style={{ fontSize: 13, fontWeight: 500, color: N.black, letterSpacing: "0.04em", marginBottom: 6 }}>+91 98765 43210</div>
         <OtpBoxes values={["8", "4", "2", ""]} />
@@ -770,7 +1092,7 @@ const Onboard1Screen = ({ go }) => (
     <Placeholder w="100%" h={220} label="Nicobar home campaign — dining & decor styled shoot" />
     <Scroll>
       <div style={{ padding: "22px 20px" }}>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 300, color: N.black, lineHeight: 1.25, marginBottom: 8 }}>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 300, color: N.black, lineHeight: 1.25, marginBottom: 8 }}>
           A home that<br />feels like you.
         </div>
         <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.8, letterSpacing: "0.02em", marginBottom: 22 }}>
@@ -782,7 +1104,7 @@ const Onboard1Screen = ({ go }) => (
           { n: "03", title: "Meet the makers", sub: "Stories from the artisans who craft each piece" },
         ].map((s) => (
           <div key={s.n} style={{ display: "flex", gap: 14, marginBottom: 16, paddingBottom: 16, borderBottom: `0.5px solid ${N.grey4}` }}>
-            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 13, color: N.grey3, flexShrink: 0, paddingTop: 2 }}>{s.n}</span>
+            <span style={{ fontFamily: "'Fraunces', serif", fontSize: 13, color: N.grey3, flexShrink: 0, paddingTop: 2 }}>{s.n}</span>
             <div>
               <div style={{ fontSize: 12, fontWeight: 500, color: N.black, letterSpacing: "0.04em", marginBottom: 3 }}>{s.title}</div>
               <div style={{ fontSize: 11, color: N.grey2, lineHeight: 1.6, letterSpacing: "0.02em" }}>{s.sub}</div>
@@ -796,64 +1118,10 @@ const Onboard1Screen = ({ go }) => (
         <div style={{ width: 24, height: 2, background: N.black }} />
         <div style={{ width: 8, height: 2, background: N.grey4 }} />
       </div>
-      <BtnPrimary onClick={() => go("onb2")}>Next</BtnPrimary>
+      <BtnPrimary onClick={() => go("swipe")}>Next</BtnPrimary>
     </div>
   </div>
 );
-
-const Onboard2Screen = ({ go }) => {
-  const [sel, setSel] = useState(0);
-  const opts = [
-    "Warm & earthy — terracotta, wood, linen",
-    "Minimal & modern — clean, neutral, spare",
-    "Eclectic & artful — layered, collected, bold",
-    "Breezy & coastal — light, natural, open",
-  ];
-  return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px" }}>
-        <NicobarLogo size={16} />
-        <span style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: N.grey2, cursor: "pointer" }} onClick={() => go("discover")}>Skip</span>
-      </div>
-      <Scroll>
-        <div style={{ padding: "20px 20px" }}>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 300, color: N.black, lineHeight: 1.3, marginBottom: 6 }}>
-            How would you describe<br />your home?
-          </div>
-          <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.75, letterSpacing: "0.02em", marginBottom: 22 }}>
-            We'll suggest looks that match your space. You can always update this later.
-          </p>
-          {opts.map((o, i) => (
-            <button
-              key={i}
-              onClick={() => setSel(i)}
-              style={{
-                width: "100%", padding: "14px 16px", marginBottom: 8, textAlign: "left",
-                border: `1px solid ${sel === i ? N.black : N.grey4}`,
-                background: sel === i ? N.black : N.white,
-                color: sel === i ? N.white : N.black,
-                fontSize: 12, letterSpacing: "0.02em", fontFamily: "'Jost', sans-serif",
-                display: "flex", alignItems: "center", gap: 10,
-              }}
-            >
-              <div style={{ width: 16, height: 16, borderRadius: "50%", border: `1px solid ${sel === i ? N.white : N.grey3}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {sel === i && <div style={{ width: 8, height: 8, borderRadius: "50%", background: N.white }} />}
-              </div>
-              {o}
-            </button>
-          ))}
-        </div>
-      </Scroll>
-      <div style={{ padding: "0 20px 20px" }}>
-        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 14 }}>
-          <div style={{ width: 8, height: 2, background: N.grey4 }} />
-          <div style={{ width: 24, height: 2, background: N.black }} />
-        </div>
-        <BtnPrimary onClick={() => go("discover")}>Show me styled looks</BtnPrimary>
-      </div>
-    </div>
-  );
-};
 
 const DiscoverScreen = ({ go }) => {
   const [filter, setFilter] = useState("All looks");
@@ -955,8 +1223,10 @@ const ProductScreen = ({ go }) => (
 
       <div style={{ padding: "20px 16px" }}>
         <div style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: N.grey2, marginBottom: 6 }}>Vases & Planters</div>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 400, color: N.black, marginBottom: 4 }}>Valley Vase</div>
-        <div style={{ fontSize: 14, color: N.black, letterSpacing: "0.04em", marginBottom: 16 }}>₹4,600</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 400, color: N.black, marginBottom: 4 }}>Valley Vase</div>
+        <div style={{ fontSize: 14, color: N.black, letterSpacing: "0.02em", marginBottom: 16 }}>
+          MRP ₹ 4,600 <span style={{ color: N.grey2, fontSize: 11 }}>Inclusive of all taxes</span>
+        </div>
 
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 18 }}>
           {["Aluminium", "Hand-finished", "Decor", "Gifting"].map(t => (
@@ -976,7 +1246,7 @@ const ProductScreen = ({ go }) => (
         </div>
 
         <div style={{ borderTop: `1px solid ${N.grey4}`, paddingTop: 16, marginBottom: 16 }}>
-          <button onClick={() => go("room")} style={{ width: "100%", padding: "13px", border: `1px solid ${N.grey4}`, background: N.white, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <button onClick={() => go("room")} style={{ width: "100%", padding: "13px", border: `1px solid ${N.grey4}`, background: N.white, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <Icon name="camera" size={16} color={N.grey1} /> See in your space
           </button>
         </div>
@@ -1024,7 +1294,7 @@ const MakerScreen = ({ go }) => (
     <Scroll>
       <Placeholder w="100%" h={220} label="Ramesh Kumar at work — pottery wheel, Khurja UP" />
       <div style={{ padding: "20px 16px" }}>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 400, color: N.black, marginBottom: 3 }}>Ramesh Kumar</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 400, color: N.black, marginBottom: 3 }}>Ramesh Kumar</div>
         <div style={{ fontSize: 11, color: N.grey2, letterSpacing: "0.04em", marginBottom: 4 }}>Master Potter · Khurja Pottery Tradition</div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 18, fontSize: 11, color: N.grey2 }}>
           <Icon name="map-pin" size={11} color={N.grey2} />
@@ -1034,14 +1304,14 @@ const MakerScreen = ({ go }) => (
         <div style={{ display: "flex", gap: 1, marginBottom: 18 }}>
           {[["3rd", "Generation"], ["22", "Years craft"], ["5", "This season"]].map(([n, l]) => (
             <div key={l} style={{ flex: 1, background: N.grey5, padding: "12px 8px", textAlign: "center", border: `0.5px solid ${N.grey4}` }}>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: N.black }}>{n}</div>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: N.black }}>{n}</div>
               <div style={{ fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase", color: N.grey2, marginTop: 3 }}>{l}</div>
             </div>
           ))}
         </div>
 
         <div style={{ paddingLeft: 14, borderLeft: `2px solid ${N.black}`, marginBottom: 18 }}>
-          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontStyle: "italic", color: N.grey1, lineHeight: 1.75 }}>
+          <p style={{ fontFamily: "'Fraunces', serif", fontSize: 16, fontStyle: "italic", color: N.grey1, lineHeight: 1.75 }}>
             "My father taught me that clay is alive. You can't force it — you have to work with what it wants to do. Every piece I make carries that lesson."
           </p>
           <p style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: N.grey3, marginTop: 8 }}>— Ramesh Kumar</p>
@@ -1081,23 +1351,79 @@ const MakerScreen = ({ go }) => (
 
 const RoomScreen = ({ go }) => {
   const [sel, setSel] = useState("Valley Vase");
+  const [roomPhoto, setRoomPhoto] = useState(null);
+  const [placed, setPlaced] = useState([]);
+  const [draggingId, setDraggingId] = useState(null);
+  const fileInputRef = useRef(null);
+  const photoBoxRef = useRef(null);
   const pieces = ["Valley Vase", "Indigo Plates", "Taper Candles", "Rattan Mirror"];
+
+  const onFile = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setRoomPhoto(url);
+    setPlaced([]);
+  };
+
+  const onPhotoClick = (e) => {
+    if (!roomPhoto) { fileInputRef.current && fileInputRef.current.click(); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+    const yPct = ((e.clientY - rect.top) / rect.height) * 100;
+    setPlaced((list) => [...list, { id: Date.now(), piece: sel, x: xPct, y: yPct }]);
+  };
+
+  const onDragMove = (e) => {
+    if (draggingId == null || !photoBoxRef.current) return;
+    const rect = photoBoxRef.current.getBoundingClientRect();
+    const xPct = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
+    const yPct = Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100));
+    setPlaced((list) => list.map((p) => (p.id === draggingId ? { ...p, x: xPct, y: yPct } : p)));
+  };
+
+  const removePlaced = (id, ev) => {
+    ev.stopPropagation();
+    setPlaced((list) => list.filter((p) => p.id !== id));
+  };
+
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={onFile} />
       <TopNav
         left={<Icon name="arrow-left" size={18} onClick={() => go("discover")} />}
         center={<span style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase" }}>My Room</span>}
-        right={<Icon name="camera" size={18} />}
+        right={<Icon name="camera" size={18} onClick={() => fileInputRef.current && fileInputRef.current.click()} />}
       />
       <Scroll>
         <div style={{ padding: "16px 16px 0" }}>
           <SectionLabel>Your space</SectionLabel>
           <div style={{ border: `1px solid ${N.grey4}`, padding: 12, marginBottom: 18, background: N.grey5 }}>
             <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: N.grey2, marginBottom: 8 }}>Living room — uploaded photo</div>
-            <Placeholder w="100%" h={130} label="Your room photo will appear here — tap to place pieces" />
+            <div
+              ref={photoBoxRef}
+              onClick={onPhotoClick}
+              style={{ position: "relative", width: "100%", height: 220, cursor: "pointer", overflow: "hidden", background: N.grey6 }}
+            >
+              {roomPhoto ? (
+                <img src={roomPhoto} alt="Your room" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              ) : (
+                <Placeholder w="100%" h="100%" label="Your room photo will appear here — tap to place pieces" />
+              )}
+              {placed.map((p) => (
+                <PlacedPiece
+                  key={p.id}
+                  p={p}
+                  onDragStart={setDraggingId}
+                  onDragMove={onDragMove}
+                  onDragEnd={() => setDraggingId(null)}
+                  onRemove={removePlaced}
+                />
+              ))}
+            </div>
             <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
               {["Retake", "Upload new"].map(l => (
-                <button key={l} style={{ padding: "7px 12px", border: `1px solid ${N.grey4}`, background: N.white, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif", color: N.grey1, display: "flex", alignItems: "center", gap: 5 }}>
+                <button key={l} onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{ padding: "7px 12px", border: `1px solid ${N.grey4}`, background: N.white, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif", color: N.grey1, display: "flex", alignItems: "center", gap: 5 }}>
                   <Icon name={l === "Retake" ? "camera" : "upload"} size={11} color={N.grey2} /> {l}
                 </button>
               ))}
@@ -1115,7 +1441,11 @@ const RoomScreen = ({ go }) => {
           </div>
 
           <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.7, letterSpacing: "0.02em", marginBottom: 14 }}>
-            <strong style={{ fontWeight: 500, color: N.black }}>{sel}</strong> selected — tap your room photo above to place it and see how it fits.
+            {roomPhoto ? (
+              <><strong style={{ fontWeight: 500, color: N.black }}>{sel}</strong> selected — tap your room photo above to place it. {placed.length > 0 ? `${placed.length} placed — drag to reposition, or tap × to remove.` : ""}</>
+            ) : (
+              <><strong style={{ fontWeight: 500, color: N.black }}>{sel}</strong> selected — tap the box above to upload a photo of your room, then tap on it to place this piece.</>
+            )}
           </p>
 
           <div style={{ border: `1px solid ${N.grey4}`, padding: "12px 14px", marginBottom: 16, background: N.grey5 }}>
@@ -1153,10 +1483,10 @@ const WishlistScreen = ({ go }) => (
       <div style={{ padding: "16px 16px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div>
-            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: N.black }}>Wishlist</div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: N.black }}>Wishlist</div>
             <div style={{ fontSize: 10, color: N.grey2, marginTop: 2, letterSpacing: "0.04em" }}>4 pieces saved</div>
           </div>
-          <button onClick={() => go("cart")} style={{ padding: "9px 16px", background: N.black, color: N.white, border: "none", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" }}>
+          <button onClick={() => go("cart")} style={{ padding: "9px 16px", background: N.black, color: N.white, border: "none", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif" }}>
             Add all to bag
           </button>
         </div>
@@ -1176,7 +1506,7 @@ const WishlistScreen = ({ go }) => (
                 <div style={{ fontSize: 11, color: N.black, marginTop: 5 }}>{p.price}</div>
               </div>
               <div style={{ display: "flex", borderTop: `1px solid ${N.grey4}` }}>
-                <button onClick={() => go("cart")} style={{ flex: 1, padding: "8px", background: N.black, color: N.white, border: "none", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" }}>
+                <button onClick={() => go("cart")} style={{ flex: 1, padding: "8px", background: N.black, color: N.white, border: "none", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif" }}>
                   Add to bag
                 </button>
                 <button style={{ width: 40, background: N.white, border: "none", borderLeft: `1px solid ${N.grey4}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1212,7 +1542,7 @@ const PurchasesScreen = ({ go }) => (
         <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 16, borderBottom: `1px solid ${N.grey4}`, marginBottom: 16 }}>
           <Placeholder w={48} h={48} style={{ borderRadius: "50%", flexShrink: 0 }} label="" />
           <div>
-            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, color: N.black }}>Priya Mehta</div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: N.black }}>Priya Mehta</div>
             <div style={{ fontSize: 10, color: N.grey2, marginTop: 2, letterSpacing: "0.04em" }}>Member since 2021</div>
           </div>
           <span style={{ marginLeft: "auto", fontSize: 8, letterSpacing: "0.14em", textTransform: "uppercase", border: `1px solid ${N.grey3}`, padding: "3px 8px", color: N.grey2 }}>Gold</span>
@@ -1222,7 +1552,7 @@ const PurchasesScreen = ({ go }) => (
         <div style={{ display: "flex", gap: 1, marginBottom: 18 }}>
           {[["18", "Orders"], ["47", "Pieces"], ["5", "Saved looks"]].map(([n, l]) => (
             <div key={l} style={{ flex: 1, padding: "12px 8px", textAlign: "center", background: N.grey5, border: `0.5px solid ${N.grey4}` }}>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: N.black }}>{n}</div>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: N.black }}>{n}</div>
               <div style={{ fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase", color: N.grey2, marginTop: 3 }}>{l}</div>
             </div>
           ))}
@@ -1257,7 +1587,7 @@ const PurchasesScreen = ({ go }) => (
                 <div style={{ fontSize: 12, color: N.black, letterSpacing: "0.02em" }}>{o.item}</div>
                 <div style={{ fontSize: 10, color: N.grey2, marginTop: 2 }}>{o.sub}</div>
                 <div style={{ fontSize: 12, color: N.black, marginTop: 6 }}>{o.price}</div>
-                <button onClick={() => go("room")} style={{ marginTop: 8, padding: "5px 10px", background: N.white, border: `1px solid ${N.grey4}`, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif", color: N.grey1, display: "flex", alignItems: "center", gap: 5 }}>
+                <button onClick={() => go("room")} style={{ marginTop: 8, padding: "5px 10px", background: N.white, border: `1px solid ${N.grey4}`, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif", color: N.grey1, display: "flex", alignItems: "center", gap: 5 }}>
                   <Icon name="camera" size={11} color={N.grey2} /> See in your space
                 </button>
               </div>
@@ -1423,7 +1753,7 @@ const ConfirmedScreen = ({ go }) => (
         <div style={{ width: 56, height: 56, border: `1px solid ${N.black}`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
           <Icon name="check" size={22} color={N.black} />
         </div>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 300, color: N.black, marginBottom: 6 }}>Order placed.</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 300, color: N.black, marginBottom: 6 }}>Order placed.</div>
         <div style={{ fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: N.grey2, marginBottom: 6 }}>Order #NIC-21034</div>
         <p style={{ fontSize: 12, color: N.grey1, lineHeight: 1.8, letterSpacing: "0.03em", marginBottom: 28, maxWidth: 260, margin: "0 auto 28px" }}>
           Your 3 pieces are being packed with care and will arrive in 4–6 working days.
@@ -1461,7 +1791,7 @@ const ProfileScreen = ({ go }) => (
         {/* Profile header */}
         <div style={{ textAlign: "center", paddingBottom: 20, borderBottom: `1px solid ${N.grey4}`, marginBottom: 20 }}>
           <Placeholder w={64} h={64} style={{ borderRadius: "50%", margin: "0 auto 12px" }} />
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, color: N.black }}>Priya Mehta</div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: N.black }}>Priya Mehta</div>
           <div style={{ fontSize: 10, color: N.grey2, marginTop: 4, letterSpacing: "0.04em" }}>p*****a@gmail.com</div>
           <div style={{ display: "inline-block", fontSize: 8, letterSpacing: "0.14em", textTransform: "uppercase", border: `1px solid ${N.grey3}`, padding: "3px 10px", color: N.grey2, marginTop: 8 }}>Gold member</div>
         </div>
@@ -1515,7 +1845,7 @@ const ProfileScreen = ({ go }) => (
 
 const ALL_SCREENS = [
   "splash", "login", "forgot", "found", "otp",
-  "onb1", "onb2", "discover", "swipe", "product", "maker",
+  "onb1", "swipe", "discover", "product", "maker",
   "room", "wishlist", "purchases", "cart", "checkout",
   "confirmed", "profile",
 ];
@@ -1535,7 +1865,6 @@ function NicobarApp() {
     found: <EmailFoundScreen go={go} />,
     otp: <OtpScreen go={go} />,
     onb1: <Onboard1Screen go={go} />,
-    onb2: <Onboard2Screen go={go} />,
     discover: <DiscoverScreen go={go} />,
     swipe: <SwipeScreen go={go} />,
     product: <ProductScreen go={go} />,
@@ -1556,8 +1885,8 @@ function NicobarApp() {
 
         {/* Header */}
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: "0.22em", textTransform: "uppercase", color: "#888", marginBottom: 4 }}>Nicobar Home — App Prototype</div>
-          <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, color: "#aaa", letterSpacing: "0.08em" }}>Image placeholders shown — replace with Nicobar photography</div>
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 9, letterSpacing: "0.22em", textTransform: "uppercase", color: "#888", marginBottom: 4 }}>Nicobar Home — App Prototype</div>
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, color: "#aaa", letterSpacing: "0.08em" }}>Image placeholders shown — replace with Nicobar photography</div>
         </div>
 
         {/* Screen selector */}
@@ -1571,7 +1900,7 @@ function NicobarApp() {
                 border: `1px solid ${screen === s ? "#1a1a1a" : "#ccc"}`,
                 background: screen === s ? "#1a1a1a" : "#fff",
                 color: screen === s ? "#fff" : "#666",
-                fontFamily: "'Jost', sans-serif", cursor: "pointer",
+                fontFamily: "'Inter', sans-serif", cursor: "pointer",
               }}
             >
               {s}
@@ -1584,7 +1913,7 @@ function NicobarApp() {
           {screens[screen]}
         </Phone>
 
-        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, color: "#aaa", letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "center" }}>
+        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 9, color: "#aaa", letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "center" }}>
           Tap buttons inside the phone to navigate · Or use the screen selector above
         </div>
       </div>
